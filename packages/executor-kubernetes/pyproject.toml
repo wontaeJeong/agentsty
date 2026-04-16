@@ -1,0 +1,26 @@
+[build-system]
+requires = ["setuptools>=69", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "agentsty-executor-kubernetes"
+version = "0.0.0"
+description = "Kubernetes executor package for agentsty"
+requires-python = ">=3.13,<3.14"
+dependencies = [
+  "agentsty-platform",
+  "kubernetes>=32,<33",
+]
+
+[tool.uv.sources]
+agentsty-platform = { workspace = true }
+
+[tool.setuptools]
+package-dir = {"" = "src"}
+
+[tool.setuptools.packages.find]
+where = ["src"]
+include = ["agentsty_executor_kubernetes*"]
+
+[tool.setuptools.package-data]
+agentsty_executor_kubernetes = ["py.typed"]

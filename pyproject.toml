@@ -1,0 +1,78 @@
+[project]
+name = "agentsty"
+version = "0.0.0"
+requires-python = ">=3.13,<3.14"
+
+[dependency-groups]
+runtime = []
+test = [
+  "httpx>=0.28,<1",
+  "pytest>=9.0.3,<10",
+  "PyYAML>=6,<7",
+]
+lint = [
+  "ruff>=0.12,<1",
+]
+typecheck = [
+  "mypy>=1.15,<2",
+]
+dev = [
+  { include-group = "runtime" },
+  { include-group = "test" },
+  { include-group = "lint" },
+  { include-group = "typecheck" },
+  "pip-audit>=2.8,<3",
+  "PyJWT[crypto]>=2.10,<3",
+  "pre-commit>=4,<5",
+]
+
+[tool.uv]
+default-groups = ["runtime", "dev"]
+
+[tool.uv.workspace]
+members = ["packages/*"]
+
+[tool.ruff]
+target-version = "py313"
+line-length = 88
+src = ["packages/*/src", "tests"]
+
+[tool.ruff.lint]
+select = ["E4", "E7", "E9", "F", "B", "UP", "I"]
+extend-ignore = ["UP046"]
+
+[tool.ruff.lint.per-file-ignores]
+"packages/api/src/agentsty_api/routes.py" = ["B008"]
+
+[tool.ruff.lint.isort]
+known-first-party = [
+  "agentsty_api",
+  "agentsty_executor_kubernetes",
+  "agentsty_platform",
+  "agentsty_runtime_opencode",
+]
+
+[tool.ruff.format]
+quote-style = "double"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = ["--import-mode=importlib"]
+markers = [
+  "unit: explicit unit-test suite for shared domain and service contracts",
+  "integration: explicit cross-boundary integration suite for API, services, persistence, runtime, executor, and gateway flows",
+  "e2e: explicit top-to-bottom end-to-end suite for public API execution scenarios",
+]
+
+[tool.mypy]
+python_version = "3.13"
+files = ["packages", "tests"]
+strict = true
+namespace_packages = true
+explicit_package_bases = true
+mypy_path = [
+  "packages/api/src",
+  "packages/executor-kubernetes/src",
+  "packages/platform/src",
+  "packages/runtime-opencode/src",
+]

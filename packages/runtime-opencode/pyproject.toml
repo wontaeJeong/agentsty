@@ -1,0 +1,25 @@
+[build-system]
+requires = ["setuptools>=69", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "agentsty-runtime-opencode"
+version = "0.0.0"
+description = "OpenCode runtime adapter package for agentsty"
+requires-python = ">=3.13,<3.14"
+dependencies = [
+  "agentsty-platform",
+]
+
+[tool.uv.sources]
+agentsty-platform = { workspace = true }
+
+[tool.setuptools]
+package-dir = {"" = "src"}
+
+[tool.setuptools.packages.find]
+where = ["src"]
+include = ["agentsty_runtime_opencode*"]
+
+[tool.setuptools.package-data]
+agentsty_runtime_opencode = ["py.typed"]

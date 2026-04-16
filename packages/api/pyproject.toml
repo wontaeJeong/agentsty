@@ -1,0 +1,32 @@
+[build-system]
+requires = ["setuptools>=69", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "agentsty-api"
+version = "0.0.0"
+description = "Transport-oriented API package for agentsty"
+requires-python = ">=3.13,<3.14"
+dependencies = [
+  "agentsty-platform",
+  "agentsty-runtime-opencode",
+  "agentsty-executor-kubernetes",
+  "fastapi>=0.115,<1",
+  "PyJWT[crypto]>=2.10,<3",
+  "uvicorn>=0.32,<1",
+]
+
+[tool.uv.sources]
+agentsty-platform = { workspace = true }
+agentsty-runtime-opencode = { workspace = true }
+agentsty-executor-kubernetes = { workspace = true }
+
+[tool.setuptools]
+package-dir = {"" = "src"}
+
+[tool.setuptools.packages.find]
+where = ["src"]
+include = ["agentsty_api*"]
+
+[tool.setuptools.package-data]
+agentsty_api = ["py.typed"]

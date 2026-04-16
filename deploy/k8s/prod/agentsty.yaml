@@ -1,0 +1,466 @@
+apiVersion: node.k8s.io/v1
+kind: RuntimeClass
+metadata:
+  name: kata-clh
+  annotations:
+    agentsty.io/assumption: Nodes that host sandbox jobs must provide the kata-clh runtime handler.
+handler: kata-clh
+scheduling:
+  nodeSelector:
+    sandbox.agentsty.io/runtime: kata
+  tolerations:
+    - key: sandbox.agentsty.io/runtime
+      operator: Equal
+      value: kata
+      effect: NoSchedule
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: agentsty-prod
+  labels:
+    app.kubernetes.io/part-of: agentsty
+    agentsty.io/environment: prod
+    agentsty.io/network-role: control-plane
+---
+apiVersion: v1
+kind: ResourceQuota
+metadata:
+  name: agentsty-platform-quota
+  namespace: agentsty-prod
+spec:
+  hard:
+    requests.cpu: "16"
+    requests.memory: 32Gi
+    limits.cpu: "24"
+    limits.memory: 48Gi
+    pods: "60"
+---
+apiVersion: v1
+kind: LimitRange
+metadata:
+  name: agentsty-platform-limits
+  namespace: agentsty-prod
+spec:
+  limits:
+    - type: Container
+      defaultRequest:
+        cpu: "1"
+        memory: 2Gi
+      default:
+        cpu: "2"
+        memory: 4Gi
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: agentsty-api
+  namespace: agentsty-prod
+automountServiceAccountToken: true
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: agentsty-control-plane-prod
+rules:
+  - apiGroups: [""]
+    resources: ["namespaces", "serviceaccounts", "pods", "pods/log", "resourcequotas", "limitranges", "configmaps"]
+    verbs: ["get", "list", "watch", "create", "patch", "update", "delete"]
+  - apiGroups: ["batch"]
+    resources: ["jobs"]
+    verbs: ["get", "list", "watch", "create", "patch", "update", "delete"]
+  - apiGroups: ["networking.k8s.io"]
+    resources: ["networkpolicies"]
+    verbs: ["get", "list", "watch", "create", "patch", "update", "delete"]
+  - apiGroups: ["rbac.authorization.k8s.io"]
+    resources: ["roles", "rolebindings"]
+    verbs: ["get", "list", "watch", "create", "patch", "update", "delete"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: agentsty-control-plane-prod
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: agentsty-control-plane-prod
+subjects:
+  - kind: ServiceAccount
+    name: agentsty-api
+    namespace: agentsty-prod
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: agentsty-platform-settings
+  namespace: agentsty-prod
+data:
+  AGENTSTY_PROFILE: production
+  AGENTSTY_API_BIND_HOST: 0.0.0.0
+  AGENTSTY_API_BIND_PORT: "8080"
+  AGENTSTY_API_BASE_PATH: /v1
+  AGENTSTY_GATEWAY_BASE_URL: https://gateway.production.internal
+  AGENTSTY_GATEWAY_INTERNAL_ONLY: "true"
+  AGENTSTY_GATEWAY_REQUIRE_TLS: "true"
+  AGENTSTY_GATEWAY_AUDIENCE: agentsty-gateway
+  AGENTSTY_GATEWAY_REQUEST_PATH: /v1/chat/completions
+  AGENTSTY_EXECUTOR_BACKEND: kubernetes
+  AGENTSTY_EXECUTOR_ISOLATION_MODE: virtual_machine
+  AGENTSTY_EXECUTOR_MAX_CONCURRENCY: "32"
+  AGENTSTY_EXECUTOR_ALLOW_PRIVILEGED_CONTAINERS: "false"
+  AGENTSTY_RUNTIME_BACKEND: opencode
+  AGENTSTY_RUNTIME_WORKSPACE_ROOT: /var/lib/agentsty/production/runtime
+  AGENTSTY_RUNTIME_ALLOW_NETWORK_EGRESS: "false"
+  AGENTSTY_RUNTIME_EXPOSE_VENDOR_CREDENTIALS: "false"
+  AGENTSTY_KUBERNETES_SHARED_STATE_SERVER: "agentsty-state.production.internal"
+  AGENTSTY_KUBERNETES_SHARED_STATE_PATH: "/exports/agentsty/production"
+  AGENTSTY_OBSERVABILITY_SERVICE_NAME: agentsty-platform
+  AGENTSTY_OBSERVABILITY_LOG_LEVEL: INFO
+  AGENTSTY_OBSERVABILITY_METRICS_ENABLED: "true"
+  AGENTSTY_OBSERVABILITY_TRACES_ENABLED: "true"
+  AGENTSTY_PERSISTENCE_DATABASE_URL: sqlite:////var/lib/agentsty/production/runtime/_service_state/nonlocal-persistence.sqlite3
+  AGENTSTY_PERSISTENCE_ARTIFACT_ROOT: /var/lib/agentsty/production/artifacts
+  AGENTSTY_PERSISTENCE_ARTIFACT_TTL_HOURS: "168"
+  AGENTSTY_PERSISTENCE_REDACT_SENSITIVE_ARTIFACTS: "true"
+  AGENTSTY_TIMEOUT_REQUEST_SECONDS: "120"
+  AGENTSTY_TIMEOUT_EXECUTION_SECONDS: "1200"
+  AGENTSTY_TIMEOUT_CANCELLATION_GRACE_SECONDS: "30"
+  AGENTSTY_AUTH_MODE: jwt
+  AGENTSTY_AUTH_REQUIRED: "true"
+  AGENTSTY_AUTH_ISSUER: https://auth.production.internal
+  AGENTSTY_AUTH_AUDIENCE: agentsty-api
+  AGENTSTY_AUTH_ALLOW_ANONYMOUS_LOCAL: "false"
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: agentsty-api
+  namespace: agentsty-prod
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: agentsty-api
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: agentsty-api
+        app.kubernetes.io/part-of: agentsty
+        agentsty.io/environment: prod
+    spec:
+      serviceAccountName: agentsty-api
+      automountServiceAccountToken: true
+      nodeSelector:
+        agentsty.io/workload: control-plane
+      topologySpreadConstraints:
+        - maxSkew: 1
+          topologyKey: topology.kubernetes.io/zone
+          whenUnsatisfiable: DoNotSchedule
+          labelSelector:
+            matchLabels:
+              app.kubernetes.io/name: agentsty-api
+      terminationGracePeriodSeconds: 45
+      containers:
+        - name: api
+          image: ghcr.io/agentsty/agentsty-api:prod
+          imagePullPolicy: Always
+          command: ["python", "-m", "uvicorn"]
+          args: ["agentsty_api.app:create_app", "--factory", "--host", "0.0.0.0", "--port", "8080"]
+          envFrom:
+            - configMapRef:
+                name: agentsty-platform-settings
+          ports:
+            - name: http
+              containerPort: 8080
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: http
+          readinessProbe:
+            httpGet:
+              path: /ready
+              port: http
+          resources:
+            requests:
+              cpu: "1"
+              memory: 2Gi
+            limits:
+              cpu: "2"
+              memory: 4Gi
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            runAsNonRoot: true
+            capabilities:
+              drop: ["ALL"]
+          volumeMounts:
+            - name: agentsty-state
+              mountPath: /var/lib/agentsty/production
+      securityContext:
+        seccompProfile:
+          type: RuntimeDefault
+      volumes:
+        - name: agentsty-state
+          nfs:
+            server: agentsty-state.production.internal
+            path: /exports/agentsty/production
+            readOnly: false
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: agentsty-api
+  namespace: agentsty-prod
+spec:
+  selector:
+    app.kubernetes.io/name: agentsty-api
+  ports:
+    - name: http
+      port: 8080
+      targetPort: http
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: agentsty-api-traffic
+  namespace: agentsty-prod
+  annotations:
+    agentsty.io/posture: deny-by-default-with-internal-allowlist
+    agentsty.io/allowlist-note: Namespace selectors agentsty.io/network-role={gateway,identity,data} must be applied to destination namespaces.
+spec:
+  podSelector:
+    matchLabels:
+      app.kubernetes.io/name: agentsty-api
+  policyTypes: ["Ingress", "Egress"]
+  ingress:
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: ingress-nginx
+          podSelector:
+            matchLabels:
+              app.kubernetes.io/name: ingress-nginx
+      ports:
+        - protocol: TCP
+          port: 8080
+  egress:
+    - to:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: kube-system
+      ports:
+        - protocol: UDP
+          port: 53
+        - protocol: TCP
+          port: 53
+    - to:
+        - namespaceSelector:
+            matchLabels:
+              agentsty.io/network-role: gateway
+      ports:
+        - protocol: TCP
+          port: 443
+    - to:
+        - namespaceSelector:
+            matchLabels:
+              agentsty.io/network-role: identity
+      ports:
+        - protocol: TCP
+          port: 443
+    - to:
+        - namespaceSelector:
+            matchLabels:
+              agentsty.io/network-role: data
+      ports:
+        - protocol: TCP
+          port: 5432
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: agentsty-tenant-sample-prod
+  labels:
+    app.kubernetes.io/part-of: agentsty
+    agentsty.io/environment: prod
+    agentsty.io/network-role: tenant-sandbox
+---
+apiVersion: v1
+kind: ResourceQuota
+metadata:
+  name: tenant-sandbox-quota
+  namespace: agentsty-tenant-sample-prod
+spec:
+  hard:
+    count/jobs.batch: "12"
+    pods: "12"
+    requests.cpu: "6"
+    requests.memory: 8Gi
+    limits.cpu: "12"
+    limits.memory: 16Gi
+---
+apiVersion: v1
+kind: LimitRange
+metadata:
+  name: tenant-sandbox-limits
+  namespace: agentsty-tenant-sample-prod
+spec:
+  limits:
+    - type: Container
+      defaultRequest:
+        cpu: 500m
+        memory: 1Gi
+      default:
+        cpu: "2"
+        memory: 2Gi
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: sa-tenant-sample-prod
+  namespace: agentsty-tenant-sample-prod
+automountServiceAccountToken: false
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: agentsty-sandbox-runner
+  namespace: agentsty-tenant-sample-prod
+rules:
+  - apiGroups: [""]
+    resources: ["pods", "pods/log"]
+    verbs: ["get", "list", "watch"]
+  - apiGroups: ["batch"]
+    resources: ["jobs"]
+    verbs: ["get", "list", "watch"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: agentsty-sandbox-runner
+  namespace: agentsty-tenant-sample-prod
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: agentsty-sandbox-runner
+subjects:
+  - kind: ServiceAccount
+    name: sa-tenant-sample-prod
+    namespace: agentsty-tenant-sample-prod
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: tenant-sandbox-default-deny
+  namespace: agentsty-tenant-sample-prod
+  annotations:
+    agentsty.io/posture: deny-by-default-with-internal-allowlist
+    agentsty.io/allowlist-note: Target namespaces must be labeled agentsty.io/network-role={gateway,identity,data} to receive sandbox egress.
+spec:
+  podSelector: {}
+  policyTypes: ["Ingress", "Egress"]
+  ingress: []
+  egress:
+    - to:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: kube-system
+      ports:
+        - protocol: UDP
+          port: 53
+        - protocol: TCP
+          port: 53
+    - to:
+        - namespaceSelector:
+            matchLabels:
+              agentsty.io/network-role: gateway
+      ports:
+        - protocol: TCP
+          port: 443
+    - to:
+        - namespaceSelector:
+            matchLabels:
+              agentsty.io/network-role: identity
+      ports:
+        - protocol: TCP
+          port: 443
+    - to:
+        - namespaceSelector:
+            matchLabels:
+              agentsty.io/network-role: data
+      ports:
+        - protocol: TCP
+          port: 5432
+---
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: sandbox-smoke-prod
+  namespace: agentsty-tenant-sample-prod
+  annotations:
+    agentsty.io/tenant: tenant-sample-prod
+    agentsty.io/request-id: prod-smoke-request
+    agentsty.io/job-id: prod-smoke-job
+    agentsty.io/runtime-class-name: kata-clh
+    agentsty.io/namespace-prefix: agentsty-
+    agentsty.io/job-name-prefix: sandbox-
+spec:
+  backoffLimit: 0
+  ttlSecondsAfterFinished: 300
+  activeDeadlineSeconds: 1200
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: agentsty-sandbox
+        agentsty.io/tenant: tenant-sample-prod
+    spec:
+      serviceAccountName: sa-tenant-sample-prod
+      automountServiceAccountToken: false
+      restartPolicy: Never
+      runtimeClassName: kata-clh
+      nodeSelector:
+        sandbox.agentsty.io/runtime: kata
+      tolerations:
+        - key: sandbox.agentsty.io/runtime
+          operator: Equal
+          value: kata
+          effect: NoSchedule
+      securityContext:
+        seccompProfile:
+          type: RuntimeDefault
+      containers:
+        - name: sandbox
+          image: ghcr.io/agentsty/agentsty-sandbox:prod
+          imagePullPolicy: Always
+          command: ["python", "-m", "agentsty_platform.runner", "serve"]
+          env:
+            - name: AGENTSTY_PROFILE
+              value: production
+            - name: AGENTSTY_SANDBOX_MODE
+              value: kubernetes
+            - name: AGENTSTY_EXECUTION_MODE
+              value: kubernetes_vm
+            - name: AGENTSTY_ISOLATION_GUARANTEE
+              value: kata_runtime_class
+          resources:
+            requests:
+              cpu: 500m
+              memory: 1Gi
+            limits:
+              cpu: "2"
+              memory: 2Gi
+          securityContext:
+            allowPrivilegeEscalation: false
+            privileged: false
+            readOnlyRootFilesystem: true
+            runAsNonRoot: true
+            capabilities:
+              drop: ["ALL"]
+          volumeMounts:
+            - name: agentsty-state
+              mountPath: /var/lib/agentsty/production
+      volumes:
+        - name: agentsty-state
+          nfs:
+            server: agentsty-state.production.internal
+            path: /exports/agentsty/production
+            readOnly: false

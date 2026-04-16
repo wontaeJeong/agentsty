@@ -1,0 +1,48 @@
+repos:
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v4.6.0
+    hooks:
+      - id: trailing-whitespace
+        exclude: ^\.gitignore$
+      - id: end-of-file-fixer
+        exclude: ^\.gitignore$
+
+  - repo: local
+    hooks:
+      - id: ruff-check
+        name: ruff check
+        entry: uv run ruff check
+        language: system
+        files: ^(packages|tests)/.*\.py$
+
+      - id: ruff-format
+        name: ruff format
+        entry: uv run ruff format
+        language: system
+        files: ^(packages|tests)/.*\.py$
+
+      - id: mypy
+        name: mypy
+        entry: uv run mypy
+        language: system
+        pass_filenames: false
+        files: ^(packages|tests)/.*\.py$
+
+      - id: uv-lock-check
+        name: uv lock check
+        entry: uv lock --check
+        language: system
+        pass_filenames: false
+
+      - id: uv-build
+        name: uv build
+        entry: uv build --all-packages --out-dir dist/pre-commit --clear --no-create-gitignore
+        language: system
+        pass_filenames: false
+
+      - id: pip-audit
+        name: pip audit
+        entry: uv run pip-audit --progress-spinner off
+        language: system
+        pass_filenames: false
+        stages: [manual]

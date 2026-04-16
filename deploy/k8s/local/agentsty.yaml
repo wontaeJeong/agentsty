@@ -1,0 +1,353 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: agentsty-local
+  labels:
+    app.kubernetes.io/part-of: agentsty
+    agentsty.io/environment: local
+    agentsty.io/network-role: control-plane
+---
+apiVersion: v1
+kind: ResourceQuota
+metadata:
+  name: agentsty-platform-quota
+  namespace: agentsty-local
+spec:
+  hard:
+    requests.cpu: "2"
+    requests.memory: 4Gi
+    limits.cpu: "4"
+    limits.memory: 8Gi
+    pods: "20"
+---
+apiVersion: v1
+kind: LimitRange
+metadata:
+  name: agentsty-platform-limits
+  namespace: agentsty-local
+spec:
+  limits:
+    - type: Container
+      defaultRequest:
+        cpu: 100m
+        memory: 256Mi
+      default:
+        cpu: 250m
+        memory: 512Mi
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: agentsty-api
+  namespace: agentsty-local
+automountServiceAccountToken: false
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: agentsty-control-plane-local
+rules:
+  - apiGroups: [""]
+    resources: ["namespaces", "serviceaccounts", "pods", "pods/log", "resourcequotas", "limitranges", "configmaps"]
+    verbs: ["get", "list", "watch", "create", "patch", "update", "delete"]
+  - apiGroups: ["batch"]
+    resources: ["jobs"]
+    verbs: ["get", "list", "watch", "create", "patch", "update", "delete"]
+  - apiGroups: ["networking.k8s.io"]
+    resources: ["networkpolicies"]
+    verbs: ["get", "list", "watch", "create", "patch", "update", "delete"]
+  - apiGroups: ["rbac.authorization.k8s.io"]
+    resources: ["roles", "rolebindings"]
+    verbs: ["get", "list", "watch", "create", "patch", "update", "delete"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: agentsty-control-plane-local
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: agentsty-control-plane-local
+subjects:
+  - kind: ServiceAccount
+    name: agentsty-api
+    namespace: agentsty-local
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: agentsty-platform-settings
+  namespace: agentsty-local
+data:
+  AGENTSTY_PROFILE: local
+  AGENTSTY_API_BIND_HOST: 0.0.0.0
+  AGENTSTY_API_BIND_PORT: "8080"
+  AGENTSTY_API_BASE_PATH: /v1
+  AGENTSTY_GATEWAY_BASE_URL: http://gateway.local.internal:9000
+  AGENTSTY_GATEWAY_INTERNAL_ONLY: "true"
+  AGENTSTY_GATEWAY_REQUIRE_TLS: "false"
+  AGENTSTY_GATEWAY_AUDIENCE: agentsty-gateway
+  AGENTSTY_GATEWAY_REQUEST_PATH: /v1/chat/completions
+  AGENTSTY_EXECUTOR_BACKEND: local
+  AGENTSTY_EXECUTOR_ISOLATION_MODE: process
+  AGENTSTY_EXECUTOR_MAX_CONCURRENCY: "4"
+  AGENTSTY_EXECUTOR_ALLOW_PRIVILEGED_CONTAINERS: "false"
+  AGENTSTY_RUNTIME_BACKEND: opencode
+  AGENTSTY_RUNTIME_WORKSPACE_ROOT: /var/lib/agentsty/local/runtime
+  AGENTSTY_RUNTIME_ALLOW_NETWORK_EGRESS: "false"
+  AGENTSTY_RUNTIME_EXPOSE_VENDOR_CREDENTIALS: "false"
+  AGENTSTY_OBSERVABILITY_SERVICE_NAME: agentsty-platform
+  AGENTSTY_OBSERVABILITY_LOG_LEVEL: DEBUG
+  AGENTSTY_OBSERVABILITY_METRICS_ENABLED: "true"
+  AGENTSTY_OBSERVABILITY_TRACES_ENABLED: "true"
+  AGENTSTY_PERSISTENCE_DATABASE_URL: sqlite:////var/lib/agentsty/local/agentsty.db
+  AGENTSTY_PERSISTENCE_ARTIFACT_ROOT: /var/lib/agentsty/local/artifacts
+  AGENTSTY_PERSISTENCE_ARTIFACT_TTL_HOURS: "24"
+  AGENTSTY_PERSISTENCE_REDACT_SENSITIVE_ARTIFACTS: "true"
+  AGENTSTY_TIMEOUT_REQUEST_SECONDS: "60"
+  AGENTSTY_TIMEOUT_EXECUTION_SECONDS: "900"
+  AGENTSTY_TIMEOUT_CANCELLATION_GRACE_SECONDS: "30"
+  AGENTSTY_AUTH_MODE: none
+  AGENTSTY_AUTH_REQUIRED: "false"
+  AGENTSTY_AUTH_ALLOW_ANONYMOUS_LOCAL: "true"
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: agentsty-api
+  namespace: agentsty-local
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: agentsty-api
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: agentsty-api
+        app.kubernetes.io/part-of: agentsty
+        agentsty.io/environment: local
+    spec:
+      serviceAccountName: agentsty-api
+      automountServiceAccountToken: false
+      terminationGracePeriodSeconds: 30
+      containers:
+        - name: api
+          image: ghcr.io/example/agentsty-api:local
+          imagePullPolicy: IfNotPresent
+          command: ["python", "-m", "uvicorn"]
+          args: ["agentsty_api.app:create_app", "--factory", "--host", "0.0.0.0", "--port", "8080"]
+          envFrom:
+            - configMapRef:
+                name: agentsty-platform-settings
+          ports:
+            - name: http
+              containerPort: 8080
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: http
+          readinessProbe:
+            httpGet:
+              path: /ready
+              port: http
+          resources:
+            requests:
+              cpu: 100m
+              memory: 256Mi
+            limits:
+              cpu: 250m
+              memory: 512Mi
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            runAsNonRoot: true
+            capabilities:
+              drop: ["ALL"]
+          volumeMounts:
+            - name: agentsty-state
+              mountPath: /var/lib/agentsty/local
+      securityContext:
+        seccompProfile:
+          type: RuntimeDefault
+      volumes:
+        - name: agentsty-state
+          emptyDir:
+            sizeLimit: 2Gi
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: agentsty-api
+  namespace: agentsty-local
+spec:
+  selector:
+    app.kubernetes.io/name: agentsty-api
+  ports:
+    - name: http
+      port: 8080
+      targetPort: http
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: agentsty-api-traffic
+  namespace: agentsty-local
+  annotations:
+    agentsty.io/posture: local-development-permissive
+spec:
+  podSelector:
+    matchLabels:
+      app.kubernetes.io/name: agentsty-api
+  policyTypes: ["Ingress", "Egress"]
+  ingress:
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: agentsty-local
+      ports:
+        - protocol: TCP
+          port: 8080
+  egress:
+    - {}
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: agentsty-tenant-sample-local
+  labels:
+    app.kubernetes.io/part-of: agentsty
+    agentsty.io/environment: local
+    agentsty.io/network-role: tenant-sandbox
+---
+apiVersion: v1
+kind: ResourceQuota
+metadata:
+  name: tenant-sandbox-quota
+  namespace: agentsty-tenant-sample-local
+spec:
+  hard:
+    count/jobs.batch: "2"
+    pods: "4"
+    requests.cpu: "1"
+    requests.memory: 1Gi
+    limits.cpu: "2"
+    limits.memory: 2Gi
+---
+apiVersion: v1
+kind: LimitRange
+metadata:
+  name: tenant-sandbox-limits
+  namespace: agentsty-tenant-sample-local
+spec:
+  limits:
+    - type: Container
+      defaultRequest:
+        cpu: 250m
+        memory: 256Mi
+      default:
+        cpu: 500m
+        memory: 512Mi
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: sa-tenant-sample-local
+  namespace: agentsty-tenant-sample-local
+automountServiceAccountToken: false
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: agentsty-sandbox-runner
+  namespace: agentsty-tenant-sample-local
+rules:
+  - apiGroups: [""]
+    resources: ["pods", "pods/log"]
+    verbs: ["get", "list", "watch"]
+  - apiGroups: ["batch"]
+    resources: ["jobs"]
+    verbs: ["get", "list", "watch"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: agentsty-sandbox-runner
+  namespace: agentsty-tenant-sample-local
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: agentsty-sandbox-runner
+subjects:
+  - kind: ServiceAccount
+    name: sa-tenant-sample-local
+    namespace: agentsty-tenant-sample-local
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: tenant-sandbox-default-deny
+  namespace: agentsty-tenant-sample-local
+  annotations:
+    agentsty.io/posture: local-development-smoke-only
+spec:
+  podSelector: {}
+  policyTypes: ["Ingress", "Egress"]
+  ingress: []
+  egress:
+    - {}
+---
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: sandbox-smoke-local
+  namespace: agentsty-tenant-sample-local
+  annotations:
+    agentsty.io/tenant: tenant-sample-local
+    agentsty.io/request-id: local-smoke-request
+    agentsty.io/job-id: local-smoke-job
+    agentsty.io/execution-note: local profile still uses the host-process executor; this packaged job only smoke-checks the runner image.
+spec:
+  backoffLimit: 0
+  ttlSecondsAfterFinished: 60
+  activeDeadlineSeconds: 300
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: agentsty-sandbox
+        agentsty.io/tenant: tenant-sample-local
+    spec:
+      serviceAccountName: sa-tenant-sample-local
+      automountServiceAccountToken: false
+      restartPolicy: Never
+      securityContext:
+        seccompProfile:
+          type: RuntimeDefault
+      containers:
+        - name: sandbox
+          image: ghcr.io/example/agentsty:local
+          imagePullPolicy: IfNotPresent
+          command: ["python", "-m", "agentsty_platform.runner", "serve"]
+          env:
+            - name: AGENTSTY_PROFILE
+              value: local
+            - name: AGENTSTY_SANDBOX_MODE
+              value: local_development
+            - name: AGENTSTY_EXECUTION_MODE
+              value: local_packaged_smoke
+            - name: AGENTSTY_ISOLATION_GUARANTEE
+              value: packaged_runner_only
+          resources:
+            requests:
+              cpu: 100m
+              memory: 128Mi
+            limits:
+              cpu: 250m
+              memory: 256Mi
+          securityContext:
+            allowPrivilegeEscalation: false
+            privileged: false
+            readOnlyRootFilesystem: true
+            runAsNonRoot: true
+            capabilities:
+              drop: ["ALL"]

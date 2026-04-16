@@ -1,0 +1,88 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  ci:
+    name: Quality gates
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python 3.13
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+
+      - name: Set up uv with cache
+        uses: astral-sh/setup-uv@v6
+        with:
+          enable-cache: true
+          cache-dependency-glob: |
+            pyproject.toml
+            uv.lock
+
+      - name: Sync workspace dependencies
+        run: uv sync --all-packages --dev --locked
+
+      - name: Verify lockfile consistency
+        run: uv lock --check
+
+      - name: Run Ruff checks
+        run: uv run ruff check .
+
+      - name: Check Ruff formatting
+        run: uv run ruff format --check .
+
+      - name: Run mypy
+        run: uv run mypy .
+
+      - name: Run pytest
+        run: uv run pytest
+
+      - name: Build workspace packages
+        run: uv build --all-packages --out-dir dist --clear --no-create-gitignore
+
+      - name: Build deployment container images
+        run: IMAGE_TAG=ci ./deploy/images/build-images.sh
+
+      - name: Run pre-commit hooks
+        run: uv run pre-commit run --all-files
+
+  dependency-audit:
+    name: Optional dependency audit
+    runs-on: ubuntu-latest
+    continue-on-error: true
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python 3.13
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+
+      - name: Set up uv with cache
+        uses: astral-sh/setup-uv@v6
+        with:
+          enable-cache: true
+          cache-dependency-glob: |
+            pyproject.toml
+            uv.lock
+
+      - name: Sync workspace dependencies
+        run: uv sync --all-packages --dev --locked
+
+      - name: Run dependency audit
+        run: uv run pip-audit --progress-spinner off

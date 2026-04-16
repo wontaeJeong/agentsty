@@ -1,0 +1,466 @@
+apiVersion: node.k8s.io/v1
+kind: RuntimeClass
+metadata:
+  name: kata-clh
+  annotations:
+    agentsty.io/assumption: Nodes that host sandbox jobs must provide the kata-clh runtime handler.
+handler: kata-clh
+scheduling:
+  nodeSelector:
+    sandbox.agentsty.io/runtime: kata
+  tolerations:
+    - key: sandbox.agentsty.io/runtime
+      operator: Equal
+      value: kata
+      effect: NoSchedule
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: agentsty-staging
+  labels:
+    app.kubernetes.io/part-of: agentsty
+    agentsty.io/environment: staging
+    agentsty.io/network-role: control-plane
+---
+apiVersion: v1
+kind: ResourceQuota
+metadata:
+  name: agentsty-platform-quota
+  namespace: agentsty-staging
+spec:
+  hard:
+    requests.cpu: "8"
+    requests.memory: 16Gi
+    limits.cpu: "12"
+    limits.memory: 24Gi
+    pods: "40"
+---
+apiVersion: v1
+kind: LimitRange
+metadata:
+  name: agentsty-platform-limits
+  namespace: agentsty-staging
+spec:
+  limits:
+    - type: Container
+      defaultRequest:
+        cpu: 500m
+        memory: 1Gi
+      default:
+        cpu: "1"
+        memory: 2Gi
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: agentsty-api
+  namespace: agentsty-staging
+automountServiceAccountToken: true
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: agentsty-control-plane-staging
+rules:
+  - apiGroups: [""]
+    resources: ["namespaces", "serviceaccounts", "pods", "pods/log", "resourcequotas", "limitranges", "configmaps"]
+    verbs: ["get", "list", "watch", "create", "patch", "update", "delete"]
+  - apiGroups: ["batch"]
+    resources: ["jobs"]
+    verbs: ["get", "list", "watch", "create", "patch", "update", "delete"]
+  - apiGroups: ["networking.k8s.io"]
+    resources: ["networkpolicies"]
+    verbs: ["get", "list", "watch", "create", "patch", "update", "delete"]
+  - apiGroups: ["rbac.authorization.k8s.io"]
+    resources: ["roles", "rolebindings"]
+    verbs: ["get", "list", "watch", "create", "patch", "update", "delete"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: agentsty-control-plane-staging
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: agentsty-control-plane-staging
+subjects:
+  - kind: ServiceAccount
+    name: agentsty-api
+    namespace: agentsty-staging
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: agentsty-platform-settings
+  namespace: agentsty-staging
+data:
+  AGENTSTY_PROFILE: staging
+  AGENTSTY_API_BIND_HOST: 0.0.0.0
+  AGENTSTY_API_BIND_PORT: "8080"
+  AGENTSTY_API_BASE_PATH: /v1
+  AGENTSTY_GATEWAY_BASE_URL: https://gateway.staging.internal
+  AGENTSTY_GATEWAY_INTERNAL_ONLY: "true"
+  AGENTSTY_GATEWAY_REQUIRE_TLS: "true"
+  AGENTSTY_GATEWAY_AUDIENCE: agentsty-gateway
+  AGENTSTY_GATEWAY_REQUEST_PATH: /v1/chat/completions
+  AGENTSTY_EXECUTOR_BACKEND: kubernetes
+  AGENTSTY_EXECUTOR_ISOLATION_MODE: virtual_machine
+  AGENTSTY_EXECUTOR_MAX_CONCURRENCY: "16"
+  AGENTSTY_EXECUTOR_ALLOW_PRIVILEGED_CONTAINERS: "false"
+  AGENTSTY_RUNTIME_BACKEND: opencode
+  AGENTSTY_RUNTIME_WORKSPACE_ROOT: /var/lib/agentsty/staging/runtime
+  AGENTSTY_RUNTIME_ALLOW_NETWORK_EGRESS: "false"
+  AGENTSTY_RUNTIME_EXPOSE_VENDOR_CREDENTIALS: "false"
+  AGENTSTY_KUBERNETES_SHARED_STATE_SERVER: "agentsty-state.staging.internal"
+  AGENTSTY_KUBERNETES_SHARED_STATE_PATH: "/exports/agentsty/staging"
+  AGENTSTY_OBSERVABILITY_SERVICE_NAME: agentsty-platform
+  AGENTSTY_OBSERVABILITY_LOG_LEVEL: INFO
+  AGENTSTY_OBSERVABILITY_METRICS_ENABLED: "true"
+  AGENTSTY_OBSERVABILITY_TRACES_ENABLED: "true"
+  AGENTSTY_PERSISTENCE_DATABASE_URL: sqlite:////var/lib/agentsty/staging/runtime/_service_state/nonlocal-persistence.sqlite3
+  AGENTSTY_PERSISTENCE_ARTIFACT_ROOT: /var/lib/agentsty/staging/artifacts
+  AGENTSTY_PERSISTENCE_ARTIFACT_TTL_HOURS: "168"
+  AGENTSTY_PERSISTENCE_REDACT_SENSITIVE_ARTIFACTS: "true"
+  AGENTSTY_TIMEOUT_REQUEST_SECONDS: "120"
+  AGENTSTY_TIMEOUT_EXECUTION_SECONDS: "1200"
+  AGENTSTY_TIMEOUT_CANCELLATION_GRACE_SECONDS: "30"
+  AGENTSTY_AUTH_MODE: jwt
+  AGENTSTY_AUTH_REQUIRED: "true"
+  AGENTSTY_AUTH_ISSUER: https://auth.staging.internal
+  AGENTSTY_AUTH_AUDIENCE: agentsty-api
+  AGENTSTY_AUTH_ALLOW_ANONYMOUS_LOCAL: "false"
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: agentsty-api
+  namespace: agentsty-staging
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: agentsty-api
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: agentsty-api
+        app.kubernetes.io/part-of: agentsty
+        agentsty.io/environment: staging
+    spec:
+      serviceAccountName: agentsty-api
+      automountServiceAccountToken: true
+      nodeSelector:
+        agentsty.io/workload: control-plane
+      topologySpreadConstraints:
+        - maxSkew: 1
+          topologyKey: topology.kubernetes.io/zone
+          whenUnsatisfiable: ScheduleAnyway
+          labelSelector:
+            matchLabels:
+              app.kubernetes.io/name: agentsty-api
+      terminationGracePeriodSeconds: 30
+      containers:
+        - name: api
+          image: ghcr.io/agentsty/agentsty-api:staging
+          imagePullPolicy: IfNotPresent
+          command: ["python", "-m", "uvicorn"]
+          args: ["agentsty_api.app:create_app", "--factory", "--host", "0.0.0.0", "--port", "8080"]
+          envFrom:
+            - configMapRef:
+                name: agentsty-platform-settings
+          ports:
+            - name: http
+              containerPort: 8080
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: http
+          readinessProbe:
+            httpGet:
+              path: /ready
+              port: http
+          resources:
+            requests:
+              cpu: 500m
+              memory: 1Gi
+            limits:
+              cpu: "1"
+              memory: 2Gi
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            runAsNonRoot: true
+            capabilities:
+              drop: ["ALL"]
+          volumeMounts:
+            - name: agentsty-state
+              mountPath: /var/lib/agentsty/staging
+      securityContext:
+        seccompProfile:
+          type: RuntimeDefault
+      volumes:
+        - name: agentsty-state
+          nfs:
+            server: agentsty-state.staging.internal
+            path: /exports/agentsty/staging
+            readOnly: false
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: agentsty-api
+  namespace: agentsty-staging
+spec:
+  selector:
+    app.kubernetes.io/name: agentsty-api
+  ports:
+    - name: http
+      port: 8080
+      targetPort: http
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: agentsty-api-traffic
+  namespace: agentsty-staging
+  annotations:
+    agentsty.io/posture: deny-by-default-with-internal-allowlist
+    agentsty.io/allowlist-note: Namespace selectors agentsty.io/network-role={gateway,identity,data} must be applied to destination namespaces.
+spec:
+  podSelector:
+    matchLabels:
+      app.kubernetes.io/name: agentsty-api
+  policyTypes: ["Ingress", "Egress"]
+  ingress:
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: ingress-nginx
+          podSelector:
+            matchLabels:
+              app.kubernetes.io/name: ingress-nginx
+      ports:
+        - protocol: TCP
+          port: 8080
+  egress:
+    - to:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: kube-system
+      ports:
+        - protocol: UDP
+          port: 53
+        - protocol: TCP
+          port: 53
+    - to:
+        - namespaceSelector:
+            matchLabels:
+              agentsty.io/network-role: gateway
+      ports:
+        - protocol: TCP
+          port: 443
+    - to:
+        - namespaceSelector:
+            matchLabels:
+              agentsty.io/network-role: identity
+      ports:
+        - protocol: TCP
+          port: 443
+    - to:
+        - namespaceSelector:
+            matchLabels:
+              agentsty.io/network-role: data
+      ports:
+        - protocol: TCP
+          port: 5432
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: agentsty-tenant-sample-staging
+  labels:
+    app.kubernetes.io/part-of: agentsty
+    agentsty.io/environment: staging
+    agentsty.io/network-role: tenant-sandbox
+---
+apiVersion: v1
+kind: ResourceQuota
+metadata:
+  name: tenant-sandbox-quota
+  namespace: agentsty-tenant-sample-staging
+spec:
+  hard:
+    count/jobs.batch: "8"
+    pods: "10"
+    requests.cpu: "4"
+    requests.memory: 4Gi
+    limits.cpu: "8"
+    limits.memory: 8Gi
+---
+apiVersion: v1
+kind: LimitRange
+metadata:
+  name: tenant-sandbox-limits
+  namespace: agentsty-tenant-sample-staging
+spec:
+  limits:
+    - type: Container
+      defaultRequest:
+        cpu: 250m
+        memory: 512Mi
+      default:
+        cpu: "1"
+        memory: 1Gi
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: sa-tenant-sample-staging
+  namespace: agentsty-tenant-sample-staging
+automountServiceAccountToken: false
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: agentsty-sandbox-runner
+  namespace: agentsty-tenant-sample-staging
+rules:
+  - apiGroups: [""]
+    resources: ["pods", "pods/log"]
+    verbs: ["get", "list", "watch"]
+  - apiGroups: ["batch"]
+    resources: ["jobs"]
+    verbs: ["get", "list", "watch"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: agentsty-sandbox-runner
+  namespace: agentsty-tenant-sample-staging
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: agentsty-sandbox-runner
+subjects:
+  - kind: ServiceAccount
+    name: sa-tenant-sample-staging
+    namespace: agentsty-tenant-sample-staging
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: tenant-sandbox-default-deny
+  namespace: agentsty-tenant-sample-staging
+  annotations:
+    agentsty.io/posture: deny-by-default-with-internal-allowlist
+    agentsty.io/allowlist-note: Target namespaces must be labeled agentsty.io/network-role={gateway,identity,data} to receive sandbox egress.
+spec:
+  podSelector: {}
+  policyTypes: ["Ingress", "Egress"]
+  ingress: []
+  egress:
+    - to:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: kube-system
+      ports:
+        - protocol: UDP
+          port: 53
+        - protocol: TCP
+          port: 53
+    - to:
+        - namespaceSelector:
+            matchLabels:
+              agentsty.io/network-role: gateway
+      ports:
+        - protocol: TCP
+          port: 443
+    - to:
+        - namespaceSelector:
+            matchLabels:
+              agentsty.io/network-role: identity
+      ports:
+        - protocol: TCP
+          port: 443
+    - to:
+        - namespaceSelector:
+            matchLabels:
+              agentsty.io/network-role: data
+      ports:
+        - protocol: TCP
+          port: 5432
+---
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: sandbox-smoke-staging
+  namespace: agentsty-tenant-sample-staging
+  annotations:
+    agentsty.io/tenant: tenant-sample-staging
+    agentsty.io/request-id: staging-smoke-request
+    agentsty.io/job-id: staging-smoke-job
+    agentsty.io/runtime-class-name: kata-clh
+    agentsty.io/namespace-prefix: agentsty-
+    agentsty.io/job-name-prefix: sandbox-
+spec:
+  backoffLimit: 0
+  ttlSecondsAfterFinished: 300
+  activeDeadlineSeconds: 1200
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: agentsty-sandbox
+        agentsty.io/tenant: tenant-sample-staging
+    spec:
+      serviceAccountName: sa-tenant-sample-staging
+      automountServiceAccountToken: false
+      restartPolicy: Never
+      runtimeClassName: kata-clh
+      nodeSelector:
+        sandbox.agentsty.io/runtime: kata
+      tolerations:
+        - key: sandbox.agentsty.io/runtime
+          operator: Equal
+          value: kata
+          effect: NoSchedule
+      securityContext:
+        seccompProfile:
+          type: RuntimeDefault
+      containers:
+        - name: sandbox
+          image: ghcr.io/agentsty/agentsty-sandbox:staging
+          imagePullPolicy: IfNotPresent
+          command: ["python", "-m", "agentsty_platform.runner", "serve"]
+          env:
+            - name: AGENTSTY_PROFILE
+              value: staging
+            - name: AGENTSTY_SANDBOX_MODE
+              value: kubernetes
+            - name: AGENTSTY_EXECUTION_MODE
+              value: kubernetes_vm
+            - name: AGENTSTY_ISOLATION_GUARANTEE
+              value: kata_runtime_class
+          resources:
+            requests:
+              cpu: 500m
+              memory: 512Mi
+            limits:
+              cpu: "1"
+              memory: 1Gi
+          securityContext:
+            allowPrivilegeEscalation: false
+            privileged: false
+            readOnlyRootFilesystem: true
+            runAsNonRoot: true
+            capabilities:
+              drop: ["ALL"]
+          volumeMounts:
+            - name: agentsty-state
+              mountPath: /var/lib/agentsty/staging
+      volumes:
+        - name: agentsty-state
+          nfs:
+            server: agentsty-state.staging.internal
+            path: /exports/agentsty/staging
+            readOnly: false

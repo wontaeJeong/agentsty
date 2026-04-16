@@ -1,0 +1,16 @@
+{
+  "include": ["packages", "tests"],
+  "pythonVersion": "3.13",
+  "typeCheckingMode": "strict",
+  "executionEnvironments": [
+    {
+      "root": ".",
+      "extraPaths": [
+        "packages/api/src",
+        "packages/executor-kubernetes/src",
+        "packages/platform/src",
+        "packages/runtime-opencode/src"
+      ]
+    }
+  ]
+}
