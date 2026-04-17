@@ -31,6 +31,7 @@ src/
     infrastructure/
     interfaces/http/
 tests/
+  e2e/
   integration/
   unit/
 docs/
@@ -64,6 +65,14 @@ curl -s -X POST http://127.0.0.1:8000/v1/chat/completions \
 uv run ruff check .
 uv run mypy src apps tests
 uv run pytest -q
+```
+
+### Dedicated E2E Coverage
+
+The repository also includes a live-server E2E test that boots Uvicorn and exercises the HTTP API over a real socket.
+
+```bash
+uv run pytest -q tests/e2e/test_live_api.py
 ```
 
 ## Phase 2 Direction
