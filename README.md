@@ -38,6 +38,10 @@ docs/
 ops/
 ```
 
+## Architecture
+
+For a fuller architectural description of the Phase 1 MVP, see [`docs/architecture.md`](docs/architecture.md).
+
 ## Run
 
 ```bash
