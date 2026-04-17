@@ -1,11 +1,12 @@
 from typing import NoReturn
 
+import pytest
 from fastapi.testclient import TestClient
 
 from agentsty.application.errors import ApplicationExecutionError
 from agentsty.domain.execution import ExecutionRequest
 from agentsty.interfaces.http.dependencies import get_execution_service
-from apps.api.main import app
+from apps.api.main import create_app
 
 
 class FailingExecutionService:
@@ -15,7 +16,7 @@ class FailingExecutionService:
 
 
 def test_chat_completions_happy_path() -> None:
-    client = TestClient(app)
+    client = TestClient(create_app())
 
     response = client.post(
         "/v1/chat/completions",
@@ -36,7 +37,7 @@ def test_chat_completions_happy_path() -> None:
 
 
 def test_chat_completions_validation_failure() -> None:
-    client = TestClient(app)
+    client = TestClient(create_app())
 
     response = client.post("/v1/chat/completions", json={})
 
@@ -44,6 +45,7 @@ def test_chat_completions_validation_failure() -> None:
 
 
 def test_chat_completions_execution_failure() -> None:
+    app = create_app()
     app.dependency_overrides[get_execution_service] = FailingExecutionService
     client = TestClient(app)
 
@@ -56,3 +58,17 @@ def test_chat_completions_execution_failure() -> None:
 
     assert response.status_code == 502
     assert response.json() == {"detail": "Execution failed: forced failure"}
+
+
+def test_invalid_runtime_fails_app_creation(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv("AGENTSTY_DEFAULT_RUNTIME", "bad")
+
+    with pytest.raises(ValueError, match="Unsupported runtime: bad"):
+        create_app()
+
+
+def test_invalid_sandbox_fails_app_creation(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv("AGENTSTY_SANDBOX_MODE", "bad")
+
+    with pytest.raises(ValueError, match="Unsupported sandbox mode: bad"):
+        create_app()
