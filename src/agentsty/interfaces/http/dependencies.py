@@ -1,9 +1,9 @@
-from functools import lru_cache
+from typing import cast
+
+from fastapi import Request
 
 from agentsty.application.services.execution_service import ExecutionService
-from agentsty.bootstrap import build_execution_service
 
 
-@lru_cache(maxsize=1)
-def get_execution_service() -> ExecutionService:
-    return build_execution_service()
+def get_execution_service(request: Request) -> ExecutionService:
+    return cast(ExecutionService, request.app.state.execution_service)
