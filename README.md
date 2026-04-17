@@ -63,6 +63,26 @@ curl -s -X POST http://127.0.0.1:8000/v1/chat/completions \
   -d '{"tenant_id":"tenant-demo","message":"hello phase1","metadata":{"trace_id":"demo-1"}}'
 ```
 
+Example response:
+
+```json
+{
+  "request_id": "254e654a-ae3d-41c6-a559-943d59a778a5",
+  "status": "completed",
+  "generated_text": "OpenCodeRuntime stub response: hello phase1",
+  "artifacts": [
+    {
+      "name": "execution-log",
+      "mime_type": "text/plain",
+      "uri": null,
+      "content": "sandbox::opencode::hello phase1"
+    }
+  ],
+  "runtime_name": "opencode",
+  "sandbox_execution_id": "sbx-da364a76-3b55-4bb0-b659-397fe2fa1652"
+}
+```
+
 ## Test and Quality Checks
 
 ```bash

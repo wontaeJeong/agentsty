@@ -1,12 +1,12 @@
-from typing import Any
-
 from pydantic import BaseModel, Field
+
+from agentsty.domain.execution import JSONScalar
 
 
 class ChatCompletionRequest(BaseModel):
     tenant_id: str = Field(min_length=1)
     message: str = Field(min_length=1)
-    metadata: dict[str, Any] | None = None
+    metadata: dict[str, JSONScalar] | None = None
 
 
 class ArtifactResponse(BaseModel):
