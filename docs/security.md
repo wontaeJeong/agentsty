@@ -35,9 +35,9 @@ This diagram is a conceptual security model. It shows where trust boundaries exi
 ```mermaid
 flowchart TD
     caller[User / Client]
-    cp[API / Control Plane]
-    sb[Sandbox Execution Layer<br/>Untrusted by default]
-    px[Proxy / Secret Mediation]
+    cp[API App / Control Plane]
+    sb[Sandbox Container / Runtime<br/>Untrusted by default]
+    px[Proxy App / Secret Mediation]
     prov[Providers / Internal Services]
     store[Storage / Audit]
     sec[Long-lived Secrets]

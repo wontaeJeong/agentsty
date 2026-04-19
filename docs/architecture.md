@@ -5,66 +5,73 @@
 The platform is structured around explicit trust and responsibility boundaries.
 The system is divided into a control plane, a proxy/mediation layer, an execution plane, and supporting abstraction packages.
 
-### Architecture overview
+### Service architecture overview
 
-This diagram is a conceptual map of the planned architecture. It shows the major boundaries and relationship directions without implying production-complete implementations already exist.
+This diagram is the canonical service-architecture view for the repository foundation. It focuses on the planned apps, services, containers, and operating boundaries without implying production-complete implementations already exist.
 
 ```mermaid
 flowchart LR
     user[User / Client]
 
     subgraph cp[Control Plane]
-        api[API / Control Plane]
+        api[API App / Control Plane]
+    end
+
+    subgraph px[Privileged / Proxy Layer]
+        proxy[Proxy App / Secret Mediation]
+        secrets[Long-lived Secrets]
+    end
+
+    subgraph ep[Execution Plane]
+        subgraph sandbox[Sandbox Container / Execution Runtime]
+            agent[Agent Runtime<br/>selected via abstraction]
+        end
+    end
+
+    subgraph st[Storage / Persistence]
+        storage[Metadata / Artifact Storage]
+        audit[Logs / Audit Records]
     end
 
     subgraph contracts[Shared Contracts]
         common[Domain Models / Common Primitives]
-        agent[Agent Runtime Abstraction]
-    end
-
-    subgraph px[Privileged Mediation Layer]
-        proxy[Proxy / Secret Mediation]
-    end
-
-    subgraph ep[Execution Plane]
-        sandbox[Sandbox Execution Layer]
-    end
-
-    subgraph st[Storage]
-        storage[Storage Abstraction]
-        audit[Audit / Metadata / Artifacts]
     end
 
     user --> api
     api --> common
-    api --> agent
-    agent --> sandbox
-    sandbox --> proxy
-    api --> storage
-    sandbox --> storage
-    storage --> audit
-    proxy --> provider[Providers / Internal Services]
+    api -->|select runtime via abstraction| agent
+    api -->|provision and monitor sandbox| sandbox
+    api -->|record job metadata| storage
+    api -->|write control-plane audit context| audit
+    sandbox -->|status and artifacts| storage
+    sandbox -->|privileged provider access| proxy
+    proxy -->|mediated calls| provider[Providers / Internal Services]
+    proxy -->|proxy access logs| audit
+    proxy -.->|holds| secrets
+    sandbox -.->|no direct access| secrets
 ```
 
-### Conceptual components
+The control plane chooses an agent runtime through an abstraction layer, but the actual agent process runs inside the sandbox container boundary. The proxy app is the privileged mediation point for provider or internal-service access, while metadata, artifacts, logs, and audit records remain separate operating concerns.
 
-- **API / control plane**
+### Service-oriented components
+
+- **API app / control plane**
   - Owns user-facing and internal control-plane APIs.
   - Manages tenants, users, sessions, jobs, and sandbox orchestration requests.
   - Must not directly embed provider secrets into execution requests.
-- **Proxy / secret mediation layer**
+- **Proxy app / secret mediation layer**
   - Owns privileged access to model providers and selected internal services.
   - Mediates requests on behalf of sandboxed agents.
   - Enforces controlled access patterns and policy checks.
-- **Sandbox execution layer**
+- **Sandbox container / execution runtime**
   - Runs untrusted agent workloads.
   - Owns execution lifecycle, workspace boundaries, and resource ownership.
   - Must be isolated from direct access to privileged credentials.
 - **Agent abstraction layer**
   - Defines contracts for supported agent runtimes.
-  - Allows multiple agent implementations without changing control-plane orchestration semantics.
-- **Storage abstraction layer**
-  - Defines persistence and artifact boundaries.
+  - Allows the control plane to select multiple agent implementations without changing orchestration semantics.
+- **Storage / persistence services**
+  - Define metadata, artifact, log, and audit boundaries.
   - Prevents the rest of the system from assuming one storage backend is permanent.
 - **Shared contracts and domain/common models**
   - Holds disciplined shared contracts, IDs, enums, and domain primitives.
@@ -109,21 +116,21 @@ Key principle: the sandbox runtime is untrusted by default, even when launched b
 
 ## 4. Request flow
 
-The canonical first runnable slice is intentionally small. It demonstrates how orchestration, sandbox provisioning, mediated privileged access, and storage fit together without implying full runtime completeness.
+The canonical first runnable slice is intentionally small. It demonstrates how the API app, sandbox container, proxy app, and storage concerns fit together without implying full runtime completeness.
 
 ```mermaid
 sequenceDiagram
     actor U as User / Client
-    participant API as API / Control Plane
-    participant SB as Sandbox Abstraction
+    participant API as API App / Control Plane
+    participant SB as Sandbox Container / Runtime
     participant AR as Agent Runtime Abstraction
-    participant PX as Proxy / Secret Mediation
+    participant PX as Proxy App / Secret Mediation
     participant ST as Storage / Metadata
 
     U->>API: Submit run request
     API->>API: Resolve tenant, user, session, job
     API->>ST: Record job and ownership metadata
-    API->>SB: Provision sandbox
+    API->>SB: Provision sandbox via abstraction
     SB-->>API: Sandbox ready
     API->>AR: Invoke agent for job
     AR->>SB: Execute inside sandbox
