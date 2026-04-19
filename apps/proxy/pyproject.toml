@@ -1,0 +1,19 @@
+[project]
+name = "agentsty-proxy"
+version = "0.1.0"
+requires-python = ">=3.12"
+dependencies = [
+  "fastapi>=0.115.0",
+  "pydantic-settings>=2.7.0",
+  "agentsty-common",
+]
+
+[build-system]
+requires = ["hatchling>=1.27.0"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/agentsty_proxy"]
+
+[tool.uv.sources]
+agentsty-common = { workspace = true }
