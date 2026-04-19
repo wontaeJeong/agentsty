@@ -1,0 +1,18 @@
+{
+  "include": ["apps", "packages", "tests"],
+  "venvPath": ".",
+  "venv": ".venv",
+  "executionEnvironments": [
+    {
+      "root": ".",
+      "extraPaths": [
+        "apps/api/src",
+        "apps/proxy/src",
+        "packages/common/src",
+        "packages/agent_core/src",
+        "packages/sandbox/src",
+        "packages/storage/src"
+      ]
+    }
+  ]
+}

@@ -1,0 +1,86 @@
+[project]
+name = "agentsty-workspace"
+version = "0.1.0"
+description = "Internal AI agent sandbox platform workspace"
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = [
+  "agentsty-api",
+  "agentsty-proxy",
+  "agentsty-agent-core",
+  "agentsty-common",
+  "agentsty-sandbox",
+  "agentsty-storage",
+]
+
+[dependency-groups]
+dev = [
+  "httpx>=0.28.0",
+  "mypy>=1.18.0",
+  "pre-commit>=4.0.0",
+  "pytest>=8.3.0",
+  "ruff>=0.11.0",
+]
+
+[build-system]
+requires = ["hatchling>=1.27.0"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/agentsty_workspace"]
+
+[tool.uv.workspace]
+members = ["apps/*", "packages/*"]
+
+[tool.uv.sources]
+agentsty-api = { workspace = true }
+agentsty-proxy = { workspace = true }
+agentsty-agent-core = { workspace = true }
+agentsty-common = { workspace = true }
+agentsty-sandbox = { workspace = true }
+agentsty-storage = { workspace = true }
+
+[tool.ruff]
+target-version = "py312"
+line-length = 100
+src = ["apps", "packages", "tests"]
+
+[tool.ruff.lint]
+select = [
+  "E",
+  "F",
+  "I",
+  "B",
+  "UP",
+  "N",
+  "A",
+  "C4",
+  "SIM",
+  "TCH",
+]
+
+[tool.ruff.format]
+quote-style = "double"
+indent-style = "space"
+
+[tool.mypy]
+python_version = "3.12"
+strict = true
+namespace_packages = true
+explicit_package_bases = true
+mypy_path = [
+  "apps/api/src",
+  "apps/proxy/src",
+  "packages/common/src",
+  "packages/agent_core/src",
+  "packages/sandbox/src",
+  "packages/storage/src",
+]
+
+[[tool.mypy.overrides]]
+module = ["tests.*"]
+disallow_untyped_defs = false
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-q"
