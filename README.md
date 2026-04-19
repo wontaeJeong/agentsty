@@ -7,23 +7,22 @@ It exists to give internal teams a secure way to execute agent workflows without
 
 These are the conceptual components planned for the next implementation pass.
 
-- **API / control plane**: receives requests, manages tenants, users, sessions, jobs, and lifecycle orchestration.
-- **Proxy / secret mediation layer**: mediates access to model providers and internal services while keeping secrets out of the sandbox.
-- **Sandbox execution layer**: runs untrusted agent workloads inside explicit isolation and resource boundaries.
+- **API app / control plane**: receives requests, manages tenants, users, sessions, jobs, and lifecycle orchestration.
+- **Proxy app / secret mediation layer**: mediates access to model providers and internal services while keeping secrets out of the sandbox.
+- **Sandbox container / runtime**: runs untrusted agent workloads inside explicit isolation and resource boundaries.
 - **Agent abstraction layer**: defines stable interfaces for multiple agent backends.
-- **Storage abstraction layer**: isolates persistence concerns from the rest of the system.
+- **Storage / persistence services**: isolate metadata, artifact, and audit concerns from the rest of the system.
 
-### Architecture overview
+### Service overview
 
-The diagram below is intentionally simplified for onboarding. It shows the planned conceptual shape of the system, not a claim that all services already exist.
+The diagram below is intentionally simplified for onboarding. It focuses on the planned service boundaries and runtime flow, not a claim that all services already exist today.
 
 ```mermaid
 flowchart LR
-    user[User / Client] --> api[API / Control Plane]
-    api --> agent[Agent Runtime Abstraction]
-    agent --> sandbox[Sandbox Execution Layer]
-    sandbox --> proxy[Proxy / Secret Mediation]
-    api --> storage[Storage Abstraction]
+    user[User / Client] --> api[API App / Control Plane]
+    api --> sandbox[Sandbox Container / Runtime]
+    sandbox --> proxy[Proxy App / Secret Mediation]
+    api --> storage[Metadata / Artifact Storage]
     sandbox --> storage
     proxy --> provider[Providers / Internal Services]
 ```
