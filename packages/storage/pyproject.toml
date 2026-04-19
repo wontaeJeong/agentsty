@@ -1,0 +1,18 @@
+[project]
+name = "agentsty-storage"
+version = "0.1.0"
+requires-python = ">=3.12"
+dependencies = [
+  "agentsty-common",
+  "pydantic>=2.11.0",
+]
+
+[build-system]
+requires = ["hatchling>=1.27.0"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/agentsty_storage"]
+
+[tool.uv.sources]
+agentsty-common = { workspace = true }
