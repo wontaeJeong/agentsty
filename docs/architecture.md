@@ -12,45 +12,45 @@ This scaffold keeps those boundaries visible in code even though all components 
 
 ### High-level architecture diagram
 
-This diagram shows the major planes and shared concerns without implying a fully hardened production deployment. The execution plane is a distinct trust boundary even though the current scaffold lives in one repository.
+This diagram focuses on the services and runtime boundaries that operate together in the current design. It intentionally emphasizes the API app, proxy app, sandbox runtime, and storage responsibilities rather than code package structure, and it does not imply a fully hardened production deployment.
 
 ```mermaid
 flowchart LR
     user[User / Internal Client]
 
     subgraph CP[Control Plane]
-        api[API / apps/api]
-        contracts[Shared Contracts / packages/common]
-        agent[Agent Abstraction / packages/agent_core]
+        api[API App / apps/api]
+        control[Identity, Policy, Run Orchestration]
     end
 
     subgraph PX[Proxy Plane / Privileged Mediation]
-        proxy[Proxy / apps/proxy]
+        proxy[Proxy App / apps/proxy]
     end
 
-    subgraph EP[Execution Plane]
-        sandbox[Sandbox Abstraction / packages/sandbox]
-        runtime[Agent Runtime]
+    subgraph EP[Execution Plane / Untrusted]
+        sandbox[Sandbox Container or Runtime]
+        agent[Agent Runtime / Backend]
     end
 
-    subgraph ST[Storage]
-        storage[Storage Abstraction / packages/storage]
-        audit[Metadata / Audit / Artifacts]
+    subgraph ST[Storage / Persistence]
+        metadata[Metadata Store]
+        artifacts[Artifacts / Logs]
     end
 
     external[Provider APIs / Internal Services]
 
     user --> api
-    api --> contracts
-    api --> agent
+    api --> control
     api --> sandbox
-    sandbox --> runtime
-    runtime --> proxy
+    control --> metadata
+    sandbox --> agent
+    agent --> proxy
     proxy --> external
-    api --> storage
-    sandbox --> storage
-    storage --> audit
+    api --> metadata
+    sandbox --> artifacts
 ```
+
+Shared packages such as `packages/common`, `packages/agent_core`, `packages/sandbox`, and `packages/storage` still matter, but they are implementation contracts inside the repository rather than separately operated services. They are therefore described in the sections below instead of being drawn as standalone service boxes here.
 
 ## Component responsibilities
 

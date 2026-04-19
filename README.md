@@ -8,14 +8,15 @@ Internal AI agent sandbox platform for securely running coding and execution age
 
 ## Platform at a glance
 
-This simplified diagram is intentionally lightweight. The richer boundary, request-flow, and lifecycle views live in `docs/architecture.md` and `docs/security.md`.
+This simplified diagram is intentionally lightweight and service-oriented. The richer boundary, request-flow, and lifecycle views live in `docs/architecture.md` and `docs/security.md`.
 
 ```mermaid
 flowchart LR
     user[User / Internal Client] --> api[API / Control Plane]
-    api --> sandbox[Sandbox / Execution Plane]
-    sandbox --> proxy[Proxy Plane / Privileged Mediation]
-    api --> storage[Storage / Metadata]
+    api --> sandbox[Sandbox Runtime]
+    sandbox --> proxy[Proxy / Privileged Mediation]
+    api --> metadata[Metadata]
+    sandbox --> artifacts[Artifacts / Logs]
 ```
 
 ## Major components
