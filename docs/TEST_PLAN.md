@@ -122,6 +122,7 @@ API responses
 CLI output
 controller logs
 cask-api logs
+cask-model-proxy logs
 ```
 
 Use a sentinel value like:
@@ -130,7 +131,7 @@ Use a sentinel value like:
 REAL_UPSTREAM_KEY_SHOULD_NEVER_LEAK
 ```
 
-Assert it is visible only to `cask-api` process/config, never to Agent Pods or user outputs.
+Assert it is visible only to `cask-model-proxy` process/config, never to Agent Pods or user outputs.
 
 ## 10. Kata testing
 

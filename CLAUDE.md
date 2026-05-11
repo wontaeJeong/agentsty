@@ -23,15 +23,17 @@ After changing code:
 - No Web UI.
 - CLI is `caskctl`.
 - API server is `cask-api`.
+- Internal model proxy is `cask-model-proxy`.
 - Controller is `cask-controller`.
 - `cask-api` includes terminal gateway for MVP.
+- `cask-model-proxy` is internal-only and holds upstream model credentials.
 - Terminal access is WebSocket -> Kubernetes pods/exec.
 - Agent Pods are not externally exposed.
 - Users never receive kubeconfig.
 - Users never submit raw `runtimeClassName`.
 - `isolationProfiles` maps user-facing profiles to Kubernetes runtime settings.
 - Real model/API keys never enter Agent Pods.
-- Only `cask-api` holds upstream model credentials.
+- Only `cask-model-proxy` holds upstream model credentials.
 
 ## Definition of done
 

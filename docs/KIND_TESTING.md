@@ -63,12 +63,14 @@ Real Kata tests must run in a real RuntimeClass-enabled cluster.
 kind create cluster --name agentcask-mvp
 docker build -t agentcask/cask-api:dev -f build/cask-api.Dockerfile .
 docker build -t agentcask/cask-controller:dev -f build/cask-controller.Dockerfile .
+docker build -t agentcask/cask-model-proxy:dev -f build/cask-model-proxy.Dockerfile .
 docker build -t agentcask/agent-runtime:dev -f build/agent-runtime.Dockerfile .
 kind load docker-image --name agentcask-mvp agentcask/cask-api:dev
 kind load docker-image --name agentcask-mvp agentcask/cask-controller:dev
+kind load docker-image --name agentcask-mvp agentcask/cask-model-proxy:dev
 kind load docker-image --name agentcask-mvp agentcask/agent-runtime:dev
 kubectl apply -f config/crd
-kubectl apply -f deploy/kind
+make kind-deploy
 go test ./test/e2e/... -count=1
 ```
 
@@ -77,6 +79,7 @@ go test ./test/e2e/... -count=1
 The E2E test must verify:
 
 - `cask-api` ready.
+- `cask-model-proxy` ready.
 - `cask-controller` ready.
 - session creation through `caskctl` or API.
 - Agent Pod created.

@@ -42,10 +42,11 @@ Reason:
 
 ## Decision 5: model proxy pattern for API key safety
 
-Only `cask-api` holds upstream model/API keys.
+Only internal `cask-model-proxy` holds upstream model/API keys.
 
 Reason:
 
 - Agent Pods are untrusted
 - terminal users can inspect environment/files
 - real keys inside Pod would leak easily
+- keeping the proxy internal lets `cask-api` remain the only externally exposed runtime component without also holding upstream credentials

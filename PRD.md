@@ -12,6 +12,7 @@ caskctl
   -> AgentSession CRD
   -> cask-controller
   -> Agent Pod
+  -> cask-model-proxy
   -> cask-api WebSocket terminal gateway
   -> caskctl terminal session
 ```
@@ -67,7 +68,17 @@ Responsibilities:
 - User input validation.
 - AgentSession CR creation/read/delete.
 - Session ownership checks.
+- Redaction of secrets in logs and errors.
+
+### 4.1.1 cask-model-proxy
+
+`cask-model-proxy` is internal-only and is not externally exposed.
+
+Responsibilities:
+
 - Minimal model proxy for MVP.
+- Session proxy token validation.
+- Upstream model credential storage.
 - Redaction of secrets in logs and errors.
 
 ### 4.2 cask-controller
@@ -240,11 +251,11 @@ The MVP must use this pattern:
 
 ```text
 Agent Pod
-  -> cask-api internal model proxy
+  -> cask-model-proxy internal model proxy
   -> on-prem model endpoint
 ```
 
-Only `cask-api` may hold upstream model credentials.
+Only `cask-model-proxy` may hold upstream model credentials.
 
 Agent Pods may receive:
 
@@ -269,11 +280,12 @@ The MVP is complete when:
 2. `make kind-test` passes on a local kind cluster.
 3. CRDs install successfully.
 4. `cask-api` starts and exposes health endpoints.
-5. `cask-controller` starts and reconciles AgentSession.
-6. `caskctl session create` creates an AgentSession.
-7. Controller creates a corresponding Agent Pod.
-8. `caskctl session connect` attaches to the Pod through `cask-api` WebSocket terminal.
-9. `caskctl session delete` deletes the session and owned Pod.
-10. `isolation.profile=default` works in kind.
-11. `isolation.profile=kata` mapping is tested in kind with a fake/plumbing RuntimeClass or skipped unless available.
-12. No test exposes real model/API keys to AgentSession, Pod env, API response, or logs.
+5. `cask-model-proxy` starts internally and exposes health endpoints.
+6. `cask-controller` starts and reconciles AgentSession.
+7. `caskctl session create` creates an AgentSession.
+8. Controller creates a corresponding Agent Pod.
+9. `caskctl session connect` attaches to the Pod through `cask-api` WebSocket terminal.
+10. `caskctl session delete` deletes the session and owned Pod.
+11. `isolation.profile=default` works in kind.
+12. `isolation.profile=kata` mapping is tested in kind with a fake/plumbing RuntimeClass or skipped unless available.
+13. No test exposes real model/API keys to AgentSession, Pod env, API response, terminal output, CLI output, or logs.

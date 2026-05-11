@@ -8,6 +8,7 @@ Product/component naming:
 
 - Project: `agentcask`
 - API server: `cask-api`
+- Internal model proxy: `cask-model-proxy`
 - Controller: `cask-controller`
 - CLI: `caskctl`
 - CRD Kind: `AgentSession`
@@ -18,7 +19,8 @@ Avoid introducing product names centered on `agent-*` unless referring to the ge
 ## Architecture rules
 
 - `cask-api` is the only externally exposed runtime component.
-- `cask-api` includes REST API, WebSocket terminal gateway, and minimal model proxy for MVP.
+- `cask-api` includes REST API and WebSocket terminal gateway for MVP.
+- `cask-model-proxy` is internal-only and handles minimal model proxy traffic.
 - There is no Web UI in the MVP.
 - End users must not access Kubernetes API directly.
 - End users must not access Agent Pods directly.
@@ -40,11 +42,11 @@ Real model/API keys must never be placed in:
 - terminal streams
 - logs
 
-Only `cask-api` may hold upstream model credentials.
+Only `cask-model-proxy` may hold upstream model credentials.
 
 Agent Pods may receive only:
 
-- internal model proxy URL
+- internal `cask-model-proxy` URL
 - short-lived session proxy token
 - projected service account token
 
@@ -93,6 +95,7 @@ Recommended layout:
 
 ```text
 cmd/cask-api/
+cmd/cask-model-proxy/
 cmd/cask-controller/
 cmd/caskctl/
 api/v1alpha1/

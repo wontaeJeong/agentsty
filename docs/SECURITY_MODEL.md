@@ -33,10 +33,11 @@ Agent Pod volumes
 terminal output
 controller logs
 cask-api logs
+cask-model-proxy logs
 test fixtures committed to git
 ```
 
-Only `cask-api` may hold upstream credentials.
+Only `cask-model-proxy` may hold upstream credentials.
 
 ## 3. Model proxy pattern
 
@@ -44,13 +45,13 @@ MVP model access:
 
 ```text
 Agent Pod
-  -> cask-api internal model proxy
+  -> cask-model-proxy internal model proxy
   -> on-prem model endpoint
 ```
 
 The Agent Pod receives one of:
 
-- short-lived session proxy token
+- short-lived session proxy token accepted by `cask-model-proxy`
 - projected service account token
 - internal-only auth material scoped to the session
 
@@ -65,7 +66,7 @@ OPENAI_API_KEY
 ANTHROPIC_API_KEY
 ```
 
-If unavoidable, those variables must contain only a short-lived proxy token accepted by `cask-api`, not a real provider key.
+If unavoidable, those variables must contain only a short-lived proxy token accepted by `cask-model-proxy`, not a real provider key.
 
 The proxy token must be:
 
@@ -88,6 +89,17 @@ create pods/exec
 ```
 
 Avoid granting broad Pod create/delete to `cask-api`.
+
+### cask-model-proxy ServiceAccount
+
+Needs:
+
+```text
+get/list AgentSession
+get AgentSession/status
+```
+
+It must not create AgentSessions or Pods.
 
 ### cask-controller ServiceAccount
 
@@ -135,7 +147,7 @@ capabilities.drop: ["ALL"]
 
 MVP should aim to restrict Agent Pod egress to:
 
-- `cask-api` model proxy
+- `cask-model-proxy` model proxy
 - Git endpoint if needed
 - package mirrors if explicitly allowed
 

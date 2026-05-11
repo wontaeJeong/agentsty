@@ -9,11 +9,12 @@ User terminal
   -> cask-api
        - REST session API
        - WebSocket terminal gateway
-       - minimal model proxy
   -> Kubernetes API
   -> AgentSession CRD
   -> cask-controller
   -> Agent Pod
+  -> cask-model-proxy
+       - minimal model proxy
 ```
 
 Only `cask-api` is externally exposed.
@@ -46,7 +47,16 @@ Responsibilities:
 - Check session ownership.
 - Open WebSocket terminal sessions.
 - Bridge terminal stream to Kubernetes `pods/exec`.
+- Redact sensitive values from logs/errors.
+
+### cask-model-proxy
+
+Internal-only model proxy.
+
+Responsibilities:
+
 - Hold upstream model provider credentials.
+- Validate session-scoped proxy tokens.
 - Proxy model calls from Agent Pods to the on-prem model endpoint.
 - Redact sensitive values from logs/errors.
 
@@ -72,7 +82,7 @@ Responsibilities:
 
 - Run a shell/tmux/agent CLI session.
 - Hold workspace files.
-- Call model through internal `cask-api` model proxy.
+- Call model through internal `cask-model-proxy` service.
 - Never hold real upstream provider credentials.
 
 ## 3. Data flow: session creation
@@ -104,11 +114,11 @@ caskctl session connect sess-abc
 ```text
 Agent CLI inside Pod
   -> internal model proxy URL
-  -> cask-api model proxy
+  -> cask-model-proxy
   -> on-prem model endpoint
 ```
 
-Real upstream credentials remain inside `cask-api` only.
+Real upstream credentials remain inside `cask-model-proxy` only.
 
 ## 6. Kubernetes resources
 
@@ -119,6 +129,8 @@ Namespace: agentcask-system
 Deployment: cask-api
 Service: cask-api
 Ingress: cask-api
+Deployment: cask-model-proxy
+Service: cask-model-proxy (ClusterIP internal only)
 Deployment: cask-controller
 ServiceAccount/RBAC
 ConfigMap: isolationProfiles
@@ -141,12 +153,11 @@ No per-session Ingress is created by default.
 
 ## 7. MVP deployment boundary
 
-For MVP, `cask-api` contains three logical modules:
+For MVP, `cask-api` contains two logical modules:
 
 ```text
 REST API
 Terminal Gateway
-Model Proxy
 ```
 
-They may later be split into separate services, but do not split them for MVP unless required by implementation constraints.
+The minimal Model Proxy is split into `cask-model-proxy` so upstream credentials are isolated in an internal-only component while `cask-api` remains the only externally exposed runtime service.

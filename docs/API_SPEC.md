@@ -176,7 +176,7 @@ GET /readyz
 
 ## 9. Model proxy endpoint
 
-Internal to cluster, not exposed publicly:
+Served by internal-only `cask-model-proxy`, not by externally exposed `cask-api`:
 
 ```http
 POST /internal/model-proxy/v1/chat/completions

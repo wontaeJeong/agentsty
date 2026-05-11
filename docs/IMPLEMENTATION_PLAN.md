@@ -6,6 +6,7 @@ Create:
 
 ```text
 cmd/cask-api/
+cmd/cask-model-proxy/
 cmd/cask-controller/
 cmd/caskctl/
 api/v1alpha1/
@@ -119,19 +120,19 @@ Acceptance criteria:
 - fake WebSocket terminal test passes.
 - kind E2E can connect to a shell/stub TUI in Agent Pod.
 
-## Phase 6. cask-api minimal model proxy
+## Phase 6. cask-model-proxy minimal model proxy
 
 Implement:
 
 - internal model proxy route.
-- upstream credentials loaded only by `cask-api`.
+- upstream credentials loaded only by `cask-model-proxy`.
 - session proxy token validation.
 - redaction middleware.
 
 Acceptance criteria:
 
 - Agent Pod uses proxy URL/token.
-- upstream key remains only in cask-api Secret/env.
+- upstream key remains only in cask-model-proxy Secret/env.
 - negative tests prove no key leak into Pod/CR/API response/logs.
 
 ## Phase 7. caskctl

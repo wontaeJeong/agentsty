@@ -4,13 +4,15 @@ This pack describes the MVP implementation target for **agentcask**.
 
 The MVP provides a Kubernetes-native agent session platform with:
 
-- `cask-api`: REST API + WebSocket terminal gateway + minimal model proxy
+- `cask-api`: REST API + WebSocket terminal gateway
+- `cask-model-proxy`: internal minimal model proxy
 - `cask-controller`: Kubernetes custom controller
 - `AgentSession` CRD under `agentcask.aidev.samsungds.net`
 - per-session Agent Pods
 - optional runtime isolation through `isolationProfiles`
 - `caskctl`: CLI client for creating, listing, connecting to, and deleting sessions
 - kind-based local integration testing
+- GitHub Actions CI/CD for tests, builds, kind E2E, and image publishing
 - strict model/API key non-exposure rules
 
 ## Read order for implementation agents
@@ -23,7 +25,7 @@ The MVP provides a Kubernetes-native agent session platform with:
 6. `docs/SECURITY_MODEL.md`
 7. `docs/IMPLEMENTATION_PLAN.md`
 8. `docs/TEST_PLAN.md`
-9. `prompts/OPENCODE_MVP_TASK.md`
+9. `docs/CI_CD.md`
 
 ## MVP scope
 
@@ -37,4 +39,4 @@ The MVP intentionally excludes:
 - production-grade audit log pipeline
 - real Kata validation inside kind
 
-The MVP must still include a secure path for model access: real model/API keys must never be placed in user-facing CRDs, API responses, Agent Pods, terminal output, or session logs.
+The MVP must still include a secure path for model access: real model/API keys must never be placed in user-facing CRDs, API responses, Agent Pods, terminal output, CLI output, or session logs. Upstream credentials are held only by the internal `cask-model-proxy` component.

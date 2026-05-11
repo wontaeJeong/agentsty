@@ -10,6 +10,7 @@ Expected:
 
 ```text
 cask-api
+cask-model-proxy
 cask-controller
 ```
 
@@ -99,6 +100,21 @@ Fix:
 - remove real/sentinel key from Agent Pod env
 - ensure only proxy token is injected
 - update redaction middleware
+
+### ModelProxyUnauthorized
+
+Cause:
+
+```text
+session proxy token is expired, revoked, invalid, or no longer maps to a live AgentSession
+```
+
+Fix:
+
+```bash
+kubectl -n agentcask-system logs deploy/cask-model-proxy
+kubectl -n agentcask-sessions get agentsession <name> -o yaml
+```
 
 ## 6. Force cleanup
 
