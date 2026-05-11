@@ -1,0 +1,18 @@
+apiVersion: agentcask.aidev.samsungds.net/v1alpha1
+kind: AgentSession
+metadata:
+  name: sess-sample
+  namespace: agentcask-sessions
+  labels:
+    agentcask.aidev.samsungds.net/user-id: dev-user
+spec:
+  userId: dev-user
+  tool: stub
+  repo:
+    url: https://example.invalid/repo.git
+    branch: main
+  modelRef: default
+  resourceProfile: small
+  isolation:
+    profile: default
+  ttlSeconds: 7200

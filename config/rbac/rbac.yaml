@@ -1,0 +1,113 @@
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: cask-api
+  namespace: agentcask-system
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: cask-controller
+  namespace: agentcask-system
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: cask-model-proxy
+  namespace: agentcask-system
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: agent-session
+  namespace: agentcask-sessions
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: cask-api
+rules:
+  - apiGroups: [agentcask.aidev.samsungds.net]
+    resources: [agentsessions]
+    verbs: [get, list, create, delete]
+  - apiGroups: [agentcask.aidev.samsungds.net]
+    resources: [agentsessions/status]
+    verbs: [get]
+  - apiGroups: [""]
+    resources: [pods]
+    verbs: [get]
+  - apiGroups: [""]
+    resources: [pods/exec]
+    verbs: [create]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: cask-model-proxy
+rules:
+  - apiGroups: [agentcask.aidev.samsungds.net]
+    resources: [agentsessions]
+    verbs: [get, list]
+  - apiGroups: [agentcask.aidev.samsungds.net]
+    resources: [agentsessions/status]
+    verbs: [get]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: cask-controller
+rules:
+  - apiGroups: [agentcask.aidev.samsungds.net]
+    resources: [agentsessions]
+    verbs: [get, list, watch, patch, update]
+  - apiGroups: [agentcask.aidev.samsungds.net]
+    resources: [agentsessions/status]
+    verbs: [get, patch, update]
+  - apiGroups: [agentcask.aidev.samsungds.net]
+    resources: [agentsessions/finalizers]
+    verbs: [update, patch]
+  - apiGroups: [""]
+    resources: [pods]
+    verbs: [get, list, watch, create, update, patch, delete]
+  - apiGroups: [node.k8s.io]
+    resources: [runtimeclasses]
+    verbs: [get, list]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: cask-api
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: cask-api
+subjects:
+  - kind: ServiceAccount
+    name: cask-api
+    namespace: agentcask-system
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: cask-model-proxy
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: cask-model-proxy
+subjects:
+  - kind: ServiceAccount
+    name: cask-model-proxy
+    namespace: agentcask-system
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: cask-controller
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: cask-controller
+subjects:
+  - kind: ServiceAccount
+    name: cask-controller
+    namespace: agentcask-system
