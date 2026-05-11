@@ -1,0 +1,40 @@
+name: kind E2E
+
+on:
+  workflow_dispatch:
+  pull_request:
+    paths:
+      - api/**
+      - cmd/**
+      - internal/**
+      - config/**
+      - deploy/**
+      - build/**
+      - test/e2e/**
+      - Makefile
+      - go.mod
+      - go.sum
+
+permissions:
+  contents: read
+
+jobs:
+  kind-test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+          cache: true
+
+      - name: Set up kind
+        uses: helm/kind-action@v1
+        with:
+          install_only: true
+
+      - name: Run kind test
+        run: make kind-test
