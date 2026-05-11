@@ -1,0 +1,8 @@
+resources:
+  - namespace.yaml
+  - network-policy.yaml
+  - runtimeclass-kata.yaml
+  - ../../config/rbac/rbac.yaml
+  - cask-api.yaml
+  - cask-model-proxy.yaml
+  - cask-controller.yaml

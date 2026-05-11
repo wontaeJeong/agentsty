@@ -1,0 +1,69 @@
+apiVersion: v1
+kind: Secret
+metadata:
+  name: cask-model-proxy-upstream
+  namespace: agentcask-system
+type: Opaque
+stringData:
+  upstreamKey: REAL_UPSTREAM_KEY_SHOULD_NEVER_LEAK
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: cask-model-proxy
+  namespace: agentcask-system
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: cask-model-proxy
+  template:
+    metadata:
+      labels:
+        app: cask-model-proxy
+    spec:
+      serviceAccountName: cask-model-proxy
+      containers:
+        - name: cask-model-proxy
+          image: agentcask/cask-model-proxy:dev
+          imagePullPolicy: IfNotPresent
+          args:
+            - --addr=:8080
+            - --namespace=agentcask-sessions
+          env:
+            - name: CASK_UPSTREAM_API_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: cask-model-proxy-upstream
+                  key: upstreamKey
+            - name: CASK_TOKEN_SECRET
+              value: kind-session-proxy-secret
+          ports:
+            - containerPort: 8080
+              name: http
+          readinessProbe:
+            httpGet:
+              path: /readyz
+              port: http
+            initialDelaySeconds: 2
+            periodSeconds: 2
+          livenessProbe:
+            httpGet:
+              path: /healthz
+              port: http
+            initialDelaySeconds: 2
+            periodSeconds: 10
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: cask-model-proxy
+  namespace: agentcask-system
+spec:
+  selector:
+    app: cask-model-proxy
+  ports:
+    - name: http
+      port: 8080
+      targetPort: http
+  type: ClusterIP

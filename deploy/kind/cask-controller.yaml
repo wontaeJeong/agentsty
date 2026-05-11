@@ -1,0 +1,25 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: cask-controller
+  namespace: agentcask-system
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: cask-controller
+  template:
+    metadata:
+      labels:
+        app: cask-controller
+    spec:
+      serviceAccountName: cask-controller
+      containers:
+        - name: cask-controller
+          image: agentcask/cask-controller:dev
+          imagePullPolicy: IfNotPresent
+          args:
+            - --namespace=agentcask-sessions
+            - --runtime-image=agentcask/agent-runtime:dev
+            - --model-proxy-url=http://cask-model-proxy.agentcask-system.svc.cluster.local:8080/internal/model-proxy/v1
+            - --token-secret=kind-session-proxy-secret
