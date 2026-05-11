@@ -1,0 +1,3 @@
+#!/bin/sh
+echo "cask-stub-tui ready"
+exec /bin/sh

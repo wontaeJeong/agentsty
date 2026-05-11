@@ -9,6 +9,10 @@ __pycache__/
 # Distribution / packaging
 .Python
 build/
+!build/
+!build/*.Dockerfile
+!build/cask-stub-tui
+bin/
 develop-eggs/
 dist/
 downloads/
