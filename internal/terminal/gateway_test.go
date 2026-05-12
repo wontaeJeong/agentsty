@@ -4,6 +4,7 @@ import (
 	"context"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"sync"
 	"testing"
 	"time"
@@ -84,5 +85,16 @@ func TestGatewayBridgesBinaryAndResize(t *testing.T) {
 	}
 	if len(stream.resizes) != 1 || stream.resizes[0].Cols != 120 || stream.resizes[0].Rows != 40 {
 		t.Fatalf("resize not forwarded: %#v", stream.resizes)
+	}
+}
+
+func TestDefaultCommandPrefersOpenCodeWithTmux(t *testing.T) {
+	cmd := strings.Join(DefaultCommand("opencode"), " ")
+	if !strings.Contains(cmd, "tmux new-session") || !strings.Contains(cmd, "opencode") {
+		t.Fatalf("opencode command does not use tmux/opencode: %v", DefaultCommand("opencode"))
+	}
+	stub := strings.Join(DefaultCommand("stub"), " ")
+	if strings.Contains(stub, "tmux") || !strings.Contains(stub, "cask-stub-tui") {
+		t.Fatalf("stub command should stay deterministic without tmux: %v", DefaultCommand("stub"))
 	}
 }
