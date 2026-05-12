@@ -205,6 +205,46 @@ cython_debug/
 .cursorignore
 .cursorindexingignore
 
+# AI coding assistant local artifacts
+#  Keep shared guidance/config like AGENTS.md, opencode.json, and .codex/config.toml trackable.
+/.sisyphus/*.local.*
+
+# OpenCode local/runtime artifacts
+/.opencode/auth.json
+/.opencode/cache/
+/.opencode/history/
+/.opencode/log/
+/.opencode/logs/
+/.opencode/plans/
+/.opencode/project/
+/.opencode/session/
+/.opencode/sessions/
+/.opencode/session_diff/
+/.opencode/snapshot/
+/.opencode/state/
+/.opencode/storage/
+/.opencode/tmp/
+/.opencode/tool-output/
+/.opencode/worktree/
+
+# OpenAI Codex local/runtime artifacts
+/.codex/auth.json
+/.codex/log/
+/.codex/logs/
+/.codex/sessions/
+/.codex/archived_sessions/
+/.codex/tmp/
+/.codex/shell_snapshots/
+/.codex/history.jsonl
+/.codex/session_index.jsonl
+/.codex/models_cache.json
+/.codex/version.json
+/.codex/.personality_migration
+/.codex/*.sqlite
+/.codex/*.sqlite-shm
+/.codex/*.sqlite-wal
+/.codex-log/
+
 # Marimo
 marimo/_static/
 marimo/_lsp/
