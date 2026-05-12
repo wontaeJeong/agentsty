@@ -61,6 +61,12 @@ func TestKindCreateConnectDeleteFlow(t *testing.T) {
 	if !strings.Contains(agentPodYAML, "cask-model-proxy.agentcask-system.svc.cluster.local") {
 		t.Fatalf("agent pod does not point at separated model proxy service: %s", agentPodYAML)
 	}
+	agentPodName := strings.TrimSpace(run(t, ctx, env, "kubectl", "-n", "agentcask-sessions", "get", "pod", "-l", "agentcask.aidev.samsungds.net/session-id="+sessionID, "-o", "jsonpath={.items[0].metadata.name}"))
+	opencodeOut := run(t, ctx, env, "kubectl", "-n", "agentcask-sessions", "exec", agentPodName, "--", "/bin/sh", "-lc", "command -v opencode >/dev/null && opencode --version")
+	if strings.TrimSpace(opencodeOut) == "" {
+		t.Fatal("agent runtime image did not report an opencode version")
+	}
+	assertNoLeak(t, "opencode version output", opencodeOut)
 	sessionYAML := run(t, ctx, env, "kubectl", "-n", "agentcask-sessions", "get", "agentsession", sessionID, "-o", "yaml")
 	assertNoLeak(t, "AgentSession yaml", sessionYAML)
 	proxyToken := run(t, ctx, env, "kubectl", "-n", "agentcask-sessions", "get", "pod", "-l", "agentcask.aidev.samsungds.net/session-id="+sessionID, "-o", "jsonpath={.items[0].spec.containers[0].env[?(@.name==\"CASK_SESSION_TOKEN\")].value}")
