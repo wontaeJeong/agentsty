@@ -9,7 +9,7 @@ import (
 )
 
 func TestAgentSessionSpecValidation(t *testing.T) {
-	spec := AgentSessionSpec{UserID: "dev-user", Tool: "stub", Repo: RepoSpec{URL: "https://example.invalid/repo.git", Branch: "main"}, ModelRef: "default", ResourceProfile: "small", Isolation: IsolationSpec{Profile: "default"}, TTLSeconds: 7200}
+	spec := AgentSessionSpec{UserID: "dev-user", Tool: "opencode", Repo: RepoSpec{URL: "https://example.invalid/repo.git", Branch: "main"}, ModelRef: "default", ResourceProfile: "small", Isolation: IsolationSpec{Profile: "default"}, TTLSeconds: 7200}
 	if err := spec.Validate(); err != nil {
 		t.Fatalf("valid spec rejected: %v", err)
 	}
@@ -20,7 +20,7 @@ func TestAgentSessionSpecValidation(t *testing.T) {
 }
 
 func TestAgentSessionJSONContainsNoSecretFields(t *testing.T) {
-	session := NewAgentSession("sess-test", "agentcask-sessions", AgentSessionSpec{UserID: "dev-user", Tool: "stub", Repo: RepoSpec{URL: "https://example.invalid/repo.git", Branch: "main"}, ModelRef: "default", ResourceProfile: "small", Isolation: IsolationSpec{Profile: "default"}, TTLSeconds: 7200}, metav1.Now())
+	session := NewAgentSession("sess-test", "agentcask-sessions", AgentSessionSpec{UserID: "dev-user", Tool: "opencode", Repo: RepoSpec{URL: "https://example.invalid/repo.git", Branch: "main"}, ModelRef: "default", ResourceProfile: "small", Isolation: IsolationSpec{Profile: "default"}, TTLSeconds: 7200}, metav1.Now())
 	data, err := json.Marshal(session)
 	if err != nil {
 		t.Fatal(err)

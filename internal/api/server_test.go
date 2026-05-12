@@ -14,7 +14,7 @@ import (
 func TestCreateSessionSuccessHidesInternals(t *testing.T) {
 	server := httptest.NewServer((&Server{Store: NewMemoryStore(true), Namespace: "agentcask-sessions"}).Handler())
 	defer server.Close()
-	body := `{"tool":"stub","repoUrl":"https://example.invalid/repo.git","branch":"main","modelRef":"default","resourceProfile":"small","isolationProfile":"default","ttlSeconds":7200}`
+	body := `{"tool":"opencode","repoUrl":"https://example.invalid/repo.git","branch":"main","modelRef":"default","resourceProfile":"small","isolationProfile":"default","ttlSeconds":7200}`
 	req, _ := http.NewRequest(http.MethodPost, server.URL+"/api/v1/sessions", strings.NewReader(body))
 	req.Header.Set("Authorization", "Bearer dev-token")
 	req.Header.Set("Content-Type", "application/json")
@@ -82,7 +82,7 @@ func TestListOnlyOwnedSessions(t *testing.T) {
 	server := httptest.NewServer((&Server{Store: store, Namespace: "agentcask-sessions"}).Handler())
 	defer server.Close()
 	create := func(token string) {
-		req, _ := http.NewRequest(http.MethodPost, server.URL+"/api/v1/sessions", strings.NewReader(`{"tool":"stub","repoUrl":"https://example.invalid/repo.git","branch":"main","modelRef":"default","resourceProfile":"small","isolationProfile":"default","ttlSeconds":7200}`))
+		req, _ := http.NewRequest(http.MethodPost, server.URL+"/api/v1/sessions", strings.NewReader(`{"tool":"opencode","repoUrl":"https://example.invalid/repo.git","branch":"main","modelRef":"default","resourceProfile":"small","isolationProfile":"default","ttlSeconds":7200}`))
 		req.Header.Set("Authorization", "Bearer "+token)
 		resp, err := http.DefaultClient.Do(req)
 		if err != nil {
