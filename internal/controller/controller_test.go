@@ -12,6 +12,7 @@ import (
 	"agentcask/internal/kube"
 	"agentcask/internal/redact"
 	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -60,6 +61,16 @@ func TestBuildPodAppliesKataProfile(t *testing.T) {
 	pod := BuildPod(session, DefaultConfig(), isolation.Profile{RuntimeClassName: "kata"})
 	if pod.Spec.RuntimeClassName == nil || *pod.Spec.RuntimeClassName != "kata" {
 		t.Fatalf("kata runtimeClassName missing: %#v", pod.Spec.RuntimeClassName)
+	}
+}
+
+func TestBuildPodSmallProfileCanStartOpenCode(t *testing.T) {
+	session := testSession("default")
+	session.Spec.Tool = "opencode"
+	pod := BuildPod(session, DefaultConfig(), isolation.Profile{})
+	limit := pod.Spec.Containers[0].Resources.Limits.Memory()
+	if limit == nil || limit.Cmp(resource.MustParse("256Mi")) < 0 {
+		t.Fatalf("small profile memory limit should support opencode startup, got %v", limit)
 	}
 }
 
