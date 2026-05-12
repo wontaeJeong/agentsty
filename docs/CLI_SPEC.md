@@ -43,6 +43,8 @@ caskctl session create \
   --ttl 2h
 ```
 
+`--tool` defaults to `opencode` for MVP sessions. Use `--tool stub` only for deterministic tests.
+
 Output:
 
 ```text

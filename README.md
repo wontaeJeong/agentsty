@@ -2,6 +2,8 @@
 
 `agentcask` is a CLI-first Kubernetes platform for isolated interactive agent sessions. The MVP includes `cask-api`, internal `cask-model-proxy`, `cask-controller`, `caskctl`, an `AgentSession` CRD, and a WebSocket terminal gateway.
 
+`opencode` is the primary MVP agent tool. `caskctl session create` defaults to `--tool opencode`, and the Agent runtime image installs the pinned `opencode-ai` CLI. The deterministic `stub` tool remains available for E2E terminal testing.
+
 Quick local checks:
 
 ```bash

@@ -75,7 +75,7 @@ hermes
 stub
 ```
 
-The implementation may initially support `stub` and one real tool.
+The implementation prioritizes `opencode` as the primary real tool. `stub` remains available as a deterministic test adapter.
 
 ### repo
 

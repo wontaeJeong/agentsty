@@ -130,17 +130,19 @@ caskctl session delete <session-id>
 
 ### 4.5 Agent runtime image
 
-The MVP may use one runtime image containing shell tools and at least one test adapter command.
+The MVP may use one runtime image containing shell tools, `opencode`, and at least one test adapter command.
 
 The runtime image should support:
 
 - `tmux`
 - shell
 - git
-- one or more agent CLIs or stub commands
+- `opencode` as the primary agent CLI
 - a deterministic test command for E2E
 
 For early kind tests, a stub TUI command is acceptable.
+
+For MVP user sessions, `opencode` is the primary supported agent CLI. The `stub` tool remains only as a deterministic test adapter.
 
 ## 5. User workflows
 
