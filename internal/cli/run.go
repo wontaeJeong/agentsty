@@ -60,7 +60,7 @@ func Run(ctx context.Context, args []string, streams IOStreams) int {
 func runCreate(ctx context.Context, client Client, args []string, streams IOStreams) int {
 	fs := flag.NewFlagSet("session create", flag.ContinueOnError)
 	fs.SetOutput(streams.Err)
-	tool := fs.String("tool", "stub", "agent tool")
+	tool := fs.String("tool", "opencode", "agent tool")
 	repo := fs.String("repo", "", "repository URL")
 	branch := fs.String("branch", "main", "repository branch")
 	model := fs.String("model", "default", "model reference")

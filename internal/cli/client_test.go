@@ -24,17 +24,17 @@ func TestRunCreateSendsJSONAndPrintsID(t *testing.T) {
 		if err := json.NewDecoder(r.Body).Decode(&got); err != nil {
 			t.Fatal(err)
 		}
-		_, _ = w.Write([]byte(`{"id":"sess-test","phase":"Pending","tool":"stub","modelRef":"default","resourceProfile":"small","isolationProfile":"default"}`))
+		_, _ = w.Write([]byte(`{"id":"sess-test","phase":"Pending","tool":"opencode","modelRef":"default","resourceProfile":"small","isolationProfile":"default"}`))
 	}))
 	defer server.Close()
 	t.Setenv("CASK_API_SERVER", server.URL)
 	t.Setenv("CASK_TOKEN", "test-token")
 	out := new(bytes.Buffer)
-	code := Run(context.Background(), []string{"session", "create", "--tool", "stub", "--repo", "https://example.invalid/repo.git"}, IOStreams{In: strings.NewReader(""), Out: out, Err: new(bytes.Buffer)})
+	code := Run(context.Background(), []string{"session", "create", "--repo", "https://example.invalid/repo.git"}, IOStreams{In: strings.NewReader(""), Out: out, Err: new(bytes.Buffer)})
 	if code != 0 {
 		t.Fatalf("run exited %d", code)
 	}
-	if got.Tool != "stub" || got.RepoURL == "" {
+	if got.Tool != "opencode" || got.RepoURL == "" {
 		t.Fatalf("bad create request: %+v", got)
 	}
 	if !strings.Contains(out.String(), "ID: sess-test") {
