@@ -8,6 +8,7 @@ import (
 	"io"
 	"os"
 	"strings"
+	"text/tabwriter"
 	"time"
 
 	"golang.org/x/term"
@@ -100,9 +101,14 @@ func runList(ctx context.Context, client Client, args []string, streams IOStream
 		_, _ = streams.Out.Write(raw)
 		return 0
 	}
-	fmt.Fprintln(streams.Out, "ID\tTOOL\tPHASE\tISOLATION\tAGE")
+	w := tabwriter.NewWriter(streams.Out, 0, 0, 2, ' ', 0)
+	fmt.Fprintln(w, "ID\tTOOL\tPHASE\tISOLATION\tAGE")
 	for _, item := range items {
-		fmt.Fprintf(streams.Out, "%s\t%s\t%s\t%s\t%s\n", item.ID, item.Tool, item.Phase, item.IsolationProfile, age(item.CreatedAt))
+		fmt.Fprintf(w, "%s\t%s\t%s\t%s\t%s\n", item.ID, item.Tool, item.Phase, item.IsolationProfile, age(item.CreatedAt))
+	}
+	if err := w.Flush(); err != nil {
+		fmt.Fprintln(streams.Err, err)
+		return 1
 	}
 	return 0
 }

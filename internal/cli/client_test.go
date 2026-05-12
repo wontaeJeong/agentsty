@@ -62,12 +62,12 @@ func TestRunGetAllowsOutputFlagAfterID(t *testing.T) {
 	}
 }
 
-func TestRunListPrintsAgeColumn(t *testing.T) {
+func TestRunListPrintsAlignedColumns(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if r.URL.Path != "/api/v1/sessions" || r.Method != http.MethodGet {
 			t.Fatalf("unexpected request %s %s", r.Method, r.URL.Path)
 		}
-		_, _ = w.Write([]byte(`{"items":[{"id":"sess-test","phase":"Running","tool":"stub","modelRef":"default","resourceProfile":"small","isolationProfile":"default","createdAt":"2026-05-11T00:00:00Z"}]}`))
+		_, _ = w.Write([]byte(`{"items":[{"id":"sess-longer","phase":"Running","tool":"opencode","modelRef":"default","resourceProfile":"small","isolationProfile":"default"},{"id":"s","phase":"Pending","tool":"stub","modelRef":"default","resourceProfile":"small","isolationProfile":"kata"}]}`))
 	}))
 	defer server.Close()
 	t.Setenv("CASK_API_SERVER", server.URL)
@@ -77,8 +77,24 @@ func TestRunListPrintsAgeColumn(t *testing.T) {
 	if code != 0 {
 		t.Fatalf("run exited %d", code)
 	}
-	if !strings.Contains(out.String(), "AGE") || !strings.Contains(out.String(), "sess-test") {
+	if strings.Contains(out.String(), "\t") {
+		t.Fatalf("list output should be space-aligned, got %q", out.String())
+	}
+	lines := strings.Split(strings.TrimSuffix(out.String(), "\n"), "\n")
+	if len(lines) != 3 {
 		t.Fatalf("unexpected list output: %q", out.String())
+	}
+	toolColumn := strings.Index(lines[0], "TOOL")
+	phaseColumn := strings.Index(lines[0], "PHASE")
+	isolationColumn := strings.Index(lines[0], "ISOLATION")
+	ageColumn := strings.Index(lines[0], "AGE")
+	for _, line := range lines[1:] {
+		if !strings.Contains(line, "  ") {
+			t.Fatalf("expected padded columns in %q", line)
+		}
+		if line[toolColumn] == ' ' || line[phaseColumn] == ' ' || line[isolationColumn] == ' ' || line[ageColumn] == ' ' {
+			t.Fatalf("columns are not aligned with header: %q", out.String())
+		}
 	}
 }
 
