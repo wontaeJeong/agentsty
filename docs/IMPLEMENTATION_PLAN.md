@@ -118,7 +118,7 @@ Implement:
 Acceptance criteria:
 
 - fake WebSocket terminal test passes.
-- kind E2E can connect to a shell/stub TUI in Agent Pod.
+- kind E2E can connect to the deterministic stub TUI and the runtime image contains `opencode` for user sessions.
 
 ## Phase 6. cask-model-proxy minimal model proxy
 
@@ -167,6 +167,7 @@ Implement:
 Acceptance criteria:
 
 - `make kind-test` passes on developer machine.
+- Agent runtime image includes `opencode` while E2E keeps deterministic terminal assertions on the stub adapter.
 - docs clearly state real Kata is not validated by kind unless runtime is installed.
 
 ## Phase 9. Documentation and prompts

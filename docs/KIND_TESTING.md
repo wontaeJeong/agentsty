@@ -4,6 +4,8 @@
 
 kind tests validate the MVP control plane and terminal path locally.
 
+The E2E flow uses the deterministic `stub` tool for terminal assertions, but it also checks that the Agent runtime image contains the primary MVP CLI, `opencode`.
+
 They do not validate real Kata VM isolation unless the host/kind node is configured with an actual Kata runtime.
 
 ## 2. Expected make targets
@@ -84,5 +86,6 @@ The E2E test must verify:
 - session creation through `caskctl` or API.
 - Agent Pod created.
 - terminal connect returns expected output.
+- `opencode` is present in the Agent runtime image.
 - session delete removes Pod.
 - no secret sentinel leaked.

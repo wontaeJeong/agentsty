@@ -23,22 +23,27 @@ client connects
 
 ## 3. Kubernetes exec command
 
-Recommended MVP command:
+Recommended MVP command for real user sessions:
 
 ```bash
 tmux new-session -A -s agent '<agent command>'
 ```
 
-Examples:
+Primary example:
 
 ```bash
 tmux new-session -A -s agent 'opencode'
+```
+
+Other tool mappings may use the same pattern when supported by the runtime image:
+
+```bash
 tmux new-session -A -s agent 'claude'
 tmux new-session -A -s agent 'codex'
 tmux new-session -A -s agent 'bash'
 ```
 
-For deterministic tests:
+For deterministic tests, keep using the stub adapter instead of launching an interactive model-backed tool:
 
 ```bash
 tmux new-session -A -s agent 'bash'
