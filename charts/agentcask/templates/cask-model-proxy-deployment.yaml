@@ -1,0 +1,96 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ .Values.modelProxy.name }}
+  namespace: {{ include "agentcask.systemNamespace" . }}
+  labels:
+    {{- include "agentcask.componentLabels" (dict "root" . "component" "cask-model-proxy" "app" .Values.modelProxy.name) | nindent 4 }}
+  {{- with .Values.commonAnnotations }}
+  annotations:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+spec:
+  replicas: {{ .Values.modelProxy.replicaCount }}
+  selector:
+    matchLabels:
+      app: {{ .Values.modelProxy.name }}
+  template:
+    metadata:
+      labels:
+        {{- include "agentcask.componentLabels" (dict "root" . "component" "cask-model-proxy" "app" .Values.modelProxy.name) | nindent 8 }}
+        {{- with .Values.modelProxy.podLabels }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
+      {{- with .Values.modelProxy.podAnnotations }}
+      annotations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+    spec:
+      serviceAccountName: {{ .Values.serviceAccounts.modelProxy.name }}
+      {{- with .Values.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.modelProxy.podSecurityContext }}
+      securityContext:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      containers:
+        - name: cask-model-proxy
+          image: {{ include "agentcask.image" (dict "root" . "image" .Values.modelProxy.image) }}
+          imagePullPolicy: {{ .Values.modelProxy.image.pullPolicy }}
+          args:
+            - --addr={{ .Values.modelProxy.args.addr }}
+            - --namespace={{ include "agentcask.sessionNamespace" . }}
+          env:
+            - name: CASK_TOKEN_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "agentcask.sessionTokenSecretName" . }}
+                  key: {{ include "agentcask.sessionTokenSecretKey" . }}
+            {{- if .Values.modelProxy.upstream.url }}
+            - name: CASK_UPSTREAM_URL
+              value: {{ .Values.modelProxy.upstream.url | quote }}
+            {{- end }}
+            {{- if or .Values.modelProxy.upstream.createSecret .Values.modelProxy.upstream.existingSecret.name }}
+            - name: CASK_UPSTREAM_API_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "agentcask.upstreamSecretName" . }}
+                  key: {{ include "agentcask.upstreamSecretKey" . }}
+            {{- end }}
+          ports:
+            - containerPort: {{ .Values.modelProxy.service.port }}
+              name: http
+          readinessProbe:
+            httpGet:
+              path: /readyz
+              port: http
+            initialDelaySeconds: 2
+            periodSeconds: 2
+          livenessProbe:
+            httpGet:
+              path: /healthz
+              port: http
+            initialDelaySeconds: 2
+            periodSeconds: 10
+          {{- with .Values.modelProxy.resources }}
+          resources:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+          {{- with .Values.modelProxy.securityContext }}
+          securityContext:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+      {{- with .Values.modelProxy.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.modelProxy.affinity }}
+      affinity:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.modelProxy.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}

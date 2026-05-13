@@ -1,0 +1,15 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ .Values.modelProxy.name }}
+  namespace: {{ include "agentcask.systemNamespace" . }}
+  labels:
+    {{- include "agentcask.componentLabels" (dict "root" . "component" "cask-model-proxy" "app" .Values.modelProxy.name) | nindent 4 }}
+spec:
+  selector:
+    app: {{ .Values.modelProxy.name }}
+  ports:
+    - name: http
+      port: {{ .Values.modelProxy.service.port }}
+      targetPort: http
+  type: {{ .Values.modelProxy.service.type }}
