@@ -50,5 +50,13 @@ jobs:
       - name: Set up kubectl
         uses: azure/setup-kubectl@v4
 
+      - name: Set up Helm
+        uses: azure/setup-helm@v4
+
+      - name: Validate Helm chart
+        run: |
+          helm lint charts/agentcask
+          helm template agentcask charts/agentcask --include-crds >/tmp/agentcask-helm.yaml
+
       - name: Validate kustomize render
         run: kubectl kustomize --load-restrictor=LoadRestrictionsNone deploy/kind >/tmp/agentcask-kind.yaml

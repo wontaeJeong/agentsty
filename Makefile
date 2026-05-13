@@ -2,7 +2,7 @@ KIND_CLUSTER ?= agentcask-mvp
 SESSION_NAMESPACE ?= agentcask-sessions
 GOARCH ?= $(shell go env GOARCH)
 
-.PHONY: build linux-build test tidy kind-up kind-build-images kind-load kind-deploy kind-test kind-down clean
+.PHONY: build linux-build test tidy helm-lint helm-template kind-up kind-build-images kind-load kind-deploy kind-test kind-down clean
 
 build:
 	go build -o bin/cask-api ./cmd/cask-api
@@ -15,6 +15,12 @@ test:
 
 tidy:
 	go mod tidy
+
+helm-lint:
+	helm lint charts/agentcask
+
+helm-template:
+	helm template agentcask charts/agentcask --include-crds >/tmp/agentcask-helm.yaml
 
 linux-build:
 	mkdir -p bin/linux

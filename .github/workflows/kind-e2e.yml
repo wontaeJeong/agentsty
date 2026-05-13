@@ -9,6 +9,7 @@ on:
       - internal/**
       - config/**
       - deploy/**
+      - charts/**
       - build/**
       - test/e2e/**
       - Makefile
