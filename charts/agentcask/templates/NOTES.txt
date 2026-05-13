@@ -9,7 +9,7 @@ Check component rollout:
   kubectl -n {{ include "agentcask.systemNamespace" . }} rollout status deploy/{{ .Values.modelProxy.name }}
   kubectl -n {{ include "agentcask.systemNamespace" . }} rollout status deploy/{{ .Values.controller.name }}
 
-For local caskctl testing:
+For local/dev caskctl testing:
 
   kubectl -n {{ include "agentcask.systemNamespace" . }} port-forward svc/{{ .Values.api.name }} 18080:{{ .Values.api.service.port }}
   export CASK_API_SERVER=http://127.0.0.1:18080
@@ -17,3 +17,4 @@ For local caskctl testing:
   ./bin/caskctl session create --tool stub --repo https://example.invalid/repo.git --ttl 30m
 
 Only cask-api is intended to be externally exposed. cask-model-proxy and Agent Pods must remain internal.
+Do not put real model/API credentials in Helm values; reference an existing Secret through modelProxy.upstream.existingSecret.
