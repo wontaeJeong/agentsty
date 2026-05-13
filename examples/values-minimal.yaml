@@ -1,0 +1,16 @@
+namespaces:
+  sessions:
+    name: agentcask-sessions
+
+modelProxy:
+  upstream:
+    url: https://model.internal.example/v1/chat/completions
+    existingSecret:
+      name: cask-model-upstream
+      key: upstreamKey
+
+sessionToken:
+  createSecret: false
+  existingSecret:
+    name: cask-session-token
+    key: tokenSecret

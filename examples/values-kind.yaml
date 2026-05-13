@@ -1,0 +1,26 @@
+api:
+  image:
+    repository: agentcask/cask-api
+    tag: dev
+
+controller:
+  image:
+    repository: agentcask/cask-controller
+    tag: dev
+
+modelProxy:
+  image:
+    repository: agentcask/cask-model-proxy
+    tag: dev
+
+agent:
+  image:
+    repository: agentcask/agent-runtime
+    tag: dev
+
+namespaces:
+  sessions:
+    name: agentcask-sessions
+
+networkPolicy:
+  enabled: true
