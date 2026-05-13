@@ -1,0 +1,15 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ .Values.api.name }}
+  namespace: {{ include "agentcask.systemNamespace" . }}
+  labels:
+    {{- include "agentcask.componentLabels" (dict "root" . "component" "cask-api" "app" .Values.api.name) | nindent 4 }}
+spec:
+  selector:
+    app: {{ .Values.api.name }}
+  ports:
+    - name: http
+      port: {{ .Values.api.service.port }}
+      targetPort: http
+  type: {{ .Values.api.service.type }}
