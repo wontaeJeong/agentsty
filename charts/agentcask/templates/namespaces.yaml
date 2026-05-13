@@ -1,0 +1,31 @@
+{{- if .Values.namespaces.system.create }}
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: {{ include "agentcask.systemNamespace" . }}
+  labels:
+    {{- include "agentcask.labels" . | nindent 4 }}
+    {{- with .Values.namespaces.system.labels }}
+    {{- toYaml . | nindent 4 }}
+    {{- end }}
+  {{- with .Values.namespaces.system.annotations }}
+  annotations:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+---
+{{- end }}
+{{- if .Values.namespaces.sessions.create }}
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: {{ include "agentcask.sessionNamespace" . }}
+  labels:
+    {{- include "agentcask.labels" . | nindent 4 }}
+    {{- with .Values.namespaces.sessions.labels }}
+    {{- toYaml . | nindent 4 }}
+    {{- end }}
+  {{- with .Values.namespaces.sessions.annotations }}
+  annotations:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+{{- end }}
