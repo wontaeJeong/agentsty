@@ -1,0 +1,71 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ .Values.controller.name }}
+  namespace: {{ include "agentcask.systemNamespace" . }}
+  labels:
+    {{- include "agentcask.componentLabels" (dict "root" . "component" "cask-controller" "app" .Values.controller.name) | nindent 4 }}
+  {{- with .Values.commonAnnotations }}
+  annotations:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+spec:
+  replicas: {{ .Values.controller.replicaCount }}
+  selector:
+    matchLabels:
+      app: {{ .Values.controller.name }}
+  template:
+    metadata:
+      labels:
+        {{- include "agentcask.componentLabels" (dict "root" . "component" "cask-controller" "app" .Values.controller.name) | nindent 8 }}
+        {{- with .Values.controller.podLabels }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
+      {{- with .Values.controller.podAnnotations }}
+      annotations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+    spec:
+      serviceAccountName: {{ .Values.serviceAccounts.controller.name }}
+      {{- with .Values.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.controller.podSecurityContext }}
+      securityContext:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      containers:
+        - name: cask-controller
+          image: {{ include "agentcask.image" (dict "root" . "image" .Values.controller.image) }}
+          imagePullPolicy: {{ .Values.controller.image.pullPolicy }}
+          args:
+            - --namespace={{ include "agentcask.sessionNamespace" . }}
+            - --runtime-image={{ include "agentcask.runtimeImage" . }}
+            - --model-proxy-url={{ include "agentcask.modelProxyURL" . }}
+          env:
+            - name: CASK_TOKEN_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "agentcask.sessionTokenSecretName" . }}
+                  key: {{ include "agentcask.sessionTokenSecretKey" . }}
+          {{- with .Values.controller.resources }}
+          resources:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+          {{- with .Values.controller.securityContext }}
+          securityContext:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+      {{- with .Values.controller.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.controller.affinity }}
+      affinity:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.controller.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
