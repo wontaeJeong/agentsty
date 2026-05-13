@@ -12,7 +12,33 @@
       "type": "object",
       "properties": {
         "system": { "$ref": "#/definitions/namespace" },
-        "sessions": { "$ref": "#/definitions/namespace" }
+        "sessions": {
+          "allOf": [
+            { "$ref": "#/definitions/namespace" },
+            {
+              "type": "object",
+              "properties": {
+                "name": { "type": "string", "minLength": 1 }
+              }
+            }
+          ]
+        }
+      }
+    },
+    "serviceAccounts": {
+      "type": "object",
+      "properties": {
+        "create": { "type": "boolean" },
+        "api": { "$ref": "#/definitions/namedServiceAccount" },
+        "controller": { "$ref": "#/definitions/namedServiceAccount" },
+        "modelProxy": { "$ref": "#/definitions/namedServiceAccount" },
+        "agentSession": {
+          "type": "object",
+          "properties": {
+            "name": { "type": "string", "enum": ["agent-session"] },
+            "annotations": { "type": "object" }
+          }
+        }
       }
     },
     "rbac": {
@@ -24,12 +50,24 @@
     },
     "sessionToken": {
       "type": "object",
+      "additionalProperties": false,
       "properties": {
         "createSecret": { "type": "boolean" },
         "secretName": { "type": "string", "minLength": 1 },
         "key": { "type": "string", "minLength": 1 },
-        "value": { "type": "string" },
         "existingSecret": { "$ref": "#/definitions/secretRef" }
+      }
+    },
+    "agent": {
+      "type": "object",
+      "properties": {
+        "image": {
+          "type": "object",
+          "properties": {
+            "repository": { "type": "string", "minLength": 1 },
+            "tag": { "type": "string" }
+          }
+        }
       }
     },
     "api": { "$ref": "#/definitions/componentWithService" },
@@ -41,12 +79,9 @@
           "properties": {
             "upstream": {
               "type": "object",
+              "additionalProperties": false,
               "properties": {
                 "url": { "type": "string" },
-                "createSecret": { "type": "boolean" },
-                "secretName": { "type": "string", "minLength": 1 },
-                "key": { "type": "string", "minLength": 1 },
-                "value": { "type": "string" },
                 "existingSecret": { "$ref": "#/definitions/secretRef" }
               }
             },
@@ -71,13 +106,6 @@
         {
           "type": "object",
           "properties": {
-            "runtimeImage": {
-              "type": "object",
-              "properties": {
-                "repository": { "type": "string", "minLength": 1 },
-                "tag": { "type": "string" }
-              }
-            },
             "modelProxyURL": { "type": "string" }
           }
         }
@@ -105,7 +133,7 @@
       "type": "object",
       "properties": {
         "create": { "type": "boolean" },
-        "name": { "type": "string", "minLength": 1 },
+        "name": { "type": "string" },
         "labels": { "type": "object" },
         "annotations": { "type": "object" }
       }
@@ -115,6 +143,13 @@
       "properties": {
         "name": { "type": "string" },
         "key": { "type": "string", "minLength": 1 }
+      }
+    },
+    "namedServiceAccount": {
+      "type": "object",
+      "properties": {
+        "name": { "type": "string", "minLength": 1 },
+        "annotations": { "type": "object" }
       }
     },
     "image": {

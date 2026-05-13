@@ -37,7 +37,7 @@ app: {{ .app | default .component }}
 {{- end -}}
 
 {{- define "agentcask.systemNamespace" -}}
-{{- .Values.namespaces.system.name -}}
+{{- default .Release.Namespace .Values.namespaces.system.name -}}
 {{- end -}}
 
 {{- define "agentcask.sessionNamespace" -}}
@@ -50,8 +50,8 @@ app: {{ .app | default .component }}
 {{- end -}}
 
 {{- define "agentcask.runtimeImage" -}}
-{{- $tag := default .Chart.AppVersion .Values.controller.runtimeImage.tag -}}
-{{- printf "%s:%s" .Values.controller.runtimeImage.repository $tag -}}
+{{- $tag := default .Chart.AppVersion .Values.agent.image.tag -}}
+{{- printf "%s:%s" .Values.agent.image.repository $tag -}}
 {{- end -}}
 
 {{- define "agentcask.rbacName" -}}
@@ -75,19 +75,11 @@ app: {{ .app | default .component }}
 {{- end -}}
 
 {{- define "agentcask.upstreamSecretName" -}}
-{{- if .Values.modelProxy.upstream.existingSecret.name -}}
 {{- .Values.modelProxy.upstream.existingSecret.name -}}
-{{- else -}}
-{{- .Values.modelProxy.upstream.secretName -}}
-{{- end -}}
 {{- end -}}
 
 {{- define "agentcask.upstreamSecretKey" -}}
-{{- if .Values.modelProxy.upstream.existingSecret.name -}}
 {{- .Values.modelProxy.upstream.existingSecret.key -}}
-{{- else -}}
-{{- .Values.modelProxy.upstream.key -}}
-{{- end -}}
 {{- end -}}
 
 {{- define "agentcask.modelProxyURL" -}}

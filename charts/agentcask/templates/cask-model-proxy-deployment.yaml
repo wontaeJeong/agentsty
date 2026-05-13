@@ -52,7 +52,7 @@ spec:
             - name: CASK_UPSTREAM_URL
               value: {{ .Values.modelProxy.upstream.url | quote }}
             {{- end }}
-            {{- if or .Values.modelProxy.upstream.createSecret .Values.modelProxy.upstream.existingSecret.name }}
+            {{- if .Values.modelProxy.upstream.existingSecret.name }}
             - name: CASK_UPSTREAM_API_KEY
               valueFrom:
                 secretKeyRef:

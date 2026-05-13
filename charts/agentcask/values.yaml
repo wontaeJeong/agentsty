@@ -7,8 +7,8 @@ imagePullSecrets: []
 
 namespaces:
   system:
-    create: true
-    name: agentcask-system
+    create: false
+    name: ""
     labels: {}
     annotations: {}
   sessions:
@@ -40,10 +40,14 @@ sessionToken:
   createSecret: true
   secretName: cask-session-token
   key: tokenSecret
-  value: dev-session-proxy-secret
   existingSecret:
     name: ""
     key: tokenSecret
+
+agent:
+  image:
+    repository: agentcask/agent-runtime
+    tag: dev
 
 api:
   name: cask-api
@@ -57,12 +61,6 @@ api:
   service:
     type: ClusterIP
     port: 8080
-  ingress:
-    enabled: false
-    className: ""
-    annotations: {}
-    hosts: []
-    tls: []
   podAnnotations: {}
   podLabels: {}
   resources: {}
@@ -96,10 +94,6 @@ modelProxy:
     port: 8080
   upstream:
     url: ""
-    createSecret: false
-    secretName: cask-model-proxy-upstream
-    key: upstreamKey
-    value: ""
     existingSecret:
       name: ""
       key: upstreamKey
@@ -129,9 +123,6 @@ controller:
     repository: agentcask/cask-controller
     tag: dev
     pullPolicy: IfNotPresent
-  runtimeImage:
-    repository: agentcask/agent-runtime
-    tag: dev
   modelProxyURL: ""
   podAnnotations: {}
   podLabels: {}
