@@ -11,6 +11,7 @@ The `CI` workflow runs on pushes and pull requests. It verifies:
 - `make test`.
 - `make build`.
 - local container image builds for `cask-api`, `cask-model-proxy`, `cask-controller`, and the Agent runtime.
+- Helm chart linting and template rendering for `charts/agentcask`.
 - kind manifest rendering with `kubectl kustomize`.
 
 ## kind E2E

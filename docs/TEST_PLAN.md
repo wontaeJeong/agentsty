@@ -4,6 +4,8 @@
 
 ```bash
 make test
+make helm-lint
+make helm-template
 make kind-test
 ```
 
@@ -91,7 +93,19 @@ Cases:
 - connect command opens WebSocket and forwards bytes.
 - local terminal state restored on errors where practical.
 
-## 8. kind E2E tests
+## 8. Helm chart tests
+
+Minimum checks:
+
+```text
+helm lint charts/agentcask
+helm template agentcask charts/agentcask
+helm install against kind with local dev images
+verify cask-api, cask-model-proxy, and cask-controller roll out
+run caskctl create/connect/delete through the Helm-installed cask-api
+```
+
+## 9. kind E2E tests
 
 Minimum flow:
 
@@ -110,7 +124,7 @@ run caskctl session delete
 verify Pod deleted
 ```
 
-## 9. Secret leakage tests
+## 10. Secret leakage tests
 
 The test suite must fail if a known fake upstream key appears in:
 
@@ -133,7 +147,7 @@ REAL_UPSTREAM_KEY_SHOULD_NEVER_LEAK
 
 Assert it is visible only to `cask-model-proxy` process/config, never to Agent Pods or user outputs.
 
-## 10. Kata testing
+## 11. Kata testing
 
 In kind:
 
