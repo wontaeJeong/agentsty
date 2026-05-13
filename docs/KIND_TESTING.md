@@ -15,6 +15,7 @@ make kind-up
 make kind-load
 make kind-deploy
 make kind-test
+make kind-helm-test
 make kind-down
 ```
 
@@ -54,6 +55,8 @@ kubectl -n agentcask-system rollout status deploy/cask-controller --timeout=180s
 ```
 
 Use one deployment path per namespace. If the static manifests already own resources in `agentcask-system`, either keep using `make kind-deploy` or install the chart into separate namespaces through values overrides.
+
+For full Helm values, CRD, Secret, and uninstall guidance, see `docs/HELM.md`.
 
 ### 3.2 Point caskctl at cask-api
 

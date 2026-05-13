@@ -100,6 +100,7 @@ Minimum checks:
 ```text
 helm lint charts/agentcask
 helm template agentcask charts/agentcask
+make kind-helm-test
 helm install against kind with local dev images
 verify cask-api, cask-model-proxy, and cask-controller roll out
 run caskctl create/connect/delete through the Helm-installed cask-api
@@ -162,3 +163,15 @@ On a real Kata cluster:
 - run `isolation.profile=kata`.
 - verify Pod has `spec.runtimeClassName=kata`.
 - verify Pod starts.
+
+## 12. Helm chart checks
+
+When chart files change, run:
+
+```bash
+make helm-lint
+make helm-template
+make kind-helm-test
+```
+
+The rendered manifests must keep `cask-model-proxy` and Agent Pods internal-only, place runtime control-plane components in the Helm release namespace, keep the session namespace configurable, and avoid embedding real upstream model credentials in values, examples, or rendered manifests.

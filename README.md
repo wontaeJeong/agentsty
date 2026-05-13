@@ -8,12 +8,15 @@ Quick local checks:
 
 ```bash
 make test
+make helm-lint
+make helm-template
 make kind-test
+make kind-helm-test
 ```
 
 `make kind-test` creates/uses a kind cluster named `agentcask-mvp`, builds and loads local images for `cask-api`, `cask-model-proxy`, `cask-controller`, and the Agent runtime, installs CRDs/RBAC/deployments, runs a create/connect/delete flow through `caskctl`, validates the separated model proxy, and checks that the sentinel upstream key `REAL_UPSTREAM_KEY_SHOULD_NEVER_LEAK` does not appear in AgentSession YAML, Agent Pod env, API/CLI output, terminal output, or component logs.
 
-For manual local `caskctl` testing in kind, including `port-forward`, `CASK_API_SERVER`, and `session connect`, see `docs/KIND_TESTING.md`. The MVP Helm chart lives in `charts/agentcask` for installable deployments and future production overrides.
+For manual local `caskctl` testing in kind, including `port-forward`, `CASK_API_SERVER`, and `session connect`, see `docs/KIND_TESTING.md`. The MVP Helm chart lives in `charts/agentcask`; see `docs/HELM.md` for install, upgrade, uninstall, values, CRD, and secret guidance.
 
 CI/CD is provided through GitHub Actions: `CI` runs formatting, module tidiness, tests, binary builds, image builds, and manifest rendering; `kind E2E` runs the local kind flow for relevant changes; `CD` publishes version-tagged images to GHCR. See `docs/CI_CD.md`.
 
