@@ -128,7 +128,6 @@ System resources:
 Namespace: agentcask-system
 Deployment: cask-api
 Service: cask-api
-Ingress: cask-api
 Deployment: cask-model-proxy
 Service: cask-model-proxy (ClusterIP internal only)
 Deployment: cask-controller
@@ -137,6 +136,8 @@ ConfigMap: isolationProfiles
 Secret: upstream model credentials
 CRD: AgentSession
 ```
+
+The MVP Helm chart in `charts/agentcask` is the installable packaging for these resources. Static kind manifests under `deploy/kind` remain the deterministic E2E path.
 
 Session resources:
 
@@ -150,6 +151,8 @@ NetworkPolicy
 ```
 
 No per-session Ingress is created by default.
+
+The Helm chart must keep `cask-model-proxy` internal-only and must not create public Agent Pod access.
 
 ## 7. MVP deployment boundary
 

@@ -39,6 +39,8 @@ test fixtures committed to git
 
 Only `cask-model-proxy` may hold upstream credentials.
 
+Helm values, examples, and documentation must not contain real upstream model/API credentials. Helm installs may reference an existing Kubernetes Secret for `cask-model-proxy`, but Agent Pods must still receive only the internal proxy URL and short-lived session proxy token.
+
 ## 3. Model proxy pattern
 
 MVP model access:
@@ -56,6 +58,8 @@ The Agent Pod receives one of:
 - internal-only auth material scoped to the session
 
 The Agent Pod does not receive real upstream credentials.
+
+The Helm chart must preserve this boundary: upstream credential Secret references belong only on `cask-model-proxy`, never on `cask-api`, `cask-controller`, AgentSession specs/status, or Agent Pods.
 
 ## 4. Tool compatibility
 
