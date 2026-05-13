@@ -23,9 +23,13 @@ func TestKindCreateConnectDeleteFlow(t *testing.T) {
 	}
 	ctx, cancel := context.WithTimeout(context.Background(), 4*time.Minute)
 	defer cancel()
-	apiURL := "http://127.0.0.1:18080"
-	modelProxyURL := "http://127.0.0.1:18081"
-	portForward := exec.CommandContext(ctx, "kubectl", "-n", "agentcask-system", "port-forward", "svc/cask-api", "18080:8080")
+	systemNamespace := envDefault("CASK_SYSTEM_NAMESPACE", "agentcask-system")
+	sessionNamespace := envDefault("CASK_SESSION_NAMESPACE", "agentcask-sessions")
+	apiPort := envDefault("CASK_API_PORT", "18080")
+	modelProxyPort := envDefault("CASK_MODEL_PROXY_PORT", "18081")
+	apiURL := "http://127.0.0.1:" + apiPort
+	modelProxyURL := "http://127.0.0.1:" + modelProxyPort
+	portForward := exec.CommandContext(ctx, "kubectl", "-n", systemNamespace, "port-forward", "svc/cask-api", apiPort+":8080")
 	portForward.Stdout = io.Discard
 	portForward.Stderr = io.Discard
 	if err := portForward.Start(); err != nil {
@@ -35,7 +39,7 @@ func TestKindCreateConnectDeleteFlow(t *testing.T) {
 		_ = portForward.Process.Kill()
 		_ = portForward.Wait()
 	}()
-	modelProxyForward := exec.CommandContext(ctx, "kubectl", "-n", "agentcask-system", "port-forward", "svc/cask-model-proxy", "18081:8080")
+	modelProxyForward := exec.CommandContext(ctx, "kubectl", "-n", systemNamespace, "port-forward", "svc/cask-model-proxy", modelProxyPort+":8080")
 	modelProxyForward.Stdout = io.Discard
 	modelProxyForward.Stderr = io.Discard
 	if err := modelProxyForward.Start(); err != nil {
@@ -56,20 +60,21 @@ func TestKindCreateConnectDeleteFlow(t *testing.T) {
 	assertNoLeak(t, "create output", createOut)
 	sessionID := parseSessionID(t, createOut)
 	waitSessionRunning(t, ctx, apiURL, sessionID)
-	agentPodYAML := run(t, ctx, env, "kubectl", "-n", "agentcask-sessions", "get", "pod", "-l", "agentcask.aidev.samsungds.net/session-id="+sessionID, "-o", "yaml")
+	agentPodYAML := run(t, ctx, env, "kubectl", "-n", sessionNamespace, "get", "pod", "-l", "agentcask.aidev.samsungds.net/session-id="+sessionID, "-o", "yaml")
 	assertNoLeak(t, "agent pod yaml", agentPodYAML)
-	if !strings.Contains(agentPodYAML, "cask-model-proxy.agentcask-system.svc.cluster.local") {
+	expectedModelProxyHost := "cask-model-proxy." + systemNamespace + ".svc.cluster.local"
+	if !strings.Contains(agentPodYAML, expectedModelProxyHost) {
 		t.Fatalf("agent pod does not point at separated model proxy service: %s", agentPodYAML)
 	}
-	agentPodName := strings.TrimSpace(run(t, ctx, env, "kubectl", "-n", "agentcask-sessions", "get", "pod", "-l", "agentcask.aidev.samsungds.net/session-id="+sessionID, "-o", "jsonpath={.items[0].metadata.name}"))
-	opencodeOut := run(t, ctx, env, "kubectl", "-n", "agentcask-sessions", "exec", agentPodName, "--", "/bin/sh", "-lc", "command -v opencode >/dev/null && opencode --version")
+	agentPodName := strings.TrimSpace(run(t, ctx, env, "kubectl", "-n", sessionNamespace, "get", "pod", "-l", "agentcask.aidev.samsungds.net/session-id="+sessionID, "-o", "jsonpath={.items[0].metadata.name}"))
+	opencodeOut := run(t, ctx, env, "kubectl", "-n", sessionNamespace, "exec", agentPodName, "--", "/bin/sh", "-lc", "command -v opencode >/dev/null && opencode --version")
 	if strings.TrimSpace(opencodeOut) == "" {
 		t.Fatal("agent runtime image did not report an opencode version")
 	}
 	assertNoLeak(t, "opencode version output", opencodeOut)
-	sessionYAML := run(t, ctx, env, "kubectl", "-n", "agentcask-sessions", "get", "agentsession", sessionID, "-o", "yaml")
+	sessionYAML := run(t, ctx, env, "kubectl", "-n", sessionNamespace, "get", "agentsession", sessionID, "-o", "yaml")
 	assertNoLeak(t, "AgentSession yaml", sessionYAML)
-	proxyToken := run(t, ctx, env, "kubectl", "-n", "agentcask-sessions", "get", "pod", "-l", "agentcask.aidev.samsungds.net/session-id="+sessionID, "-o", "jsonpath={.items[0].spec.containers[0].env[?(@.name==\"CASK_SESSION_TOKEN\")].value}")
+	proxyToken := run(t, ctx, env, "kubectl", "-n", sessionNamespace, "get", "pod", "-l", "agentcask.aidev.samsungds.net/session-id="+sessionID, "-o", "jsonpath={.items[0].spec.containers[0].env[?(@.name==\"CASK_SESSION_TOKEN\")].value}")
 	proxyOut := postModelProxy(t, ctx, modelProxyURL, strings.TrimSpace(proxyToken))
 	if !strings.Contains(proxyOut, sessionID) {
 		t.Fatalf("model proxy response missing session ID: %s", proxyOut)
@@ -85,10 +90,10 @@ func TestKindCreateConnectDeleteFlow(t *testing.T) {
 	assertNoLeak(t, "connect output", connectOut)
 	deleteOut := run(t, ctx, env, caskctl, "session", "delete", sessionID)
 	assertNoLeak(t, "delete output", deleteOut)
-	waitPodDeleted(t, ctx, sessionID)
-	apiLogs := run(t, ctx, env, "kubectl", "-n", "agentcask-system", "logs", "deploy/cask-api")
-	modelProxyLogs := run(t, ctx, env, "kubectl", "-n", "agentcask-system", "logs", "deploy/cask-model-proxy")
-	controllerLogs := run(t, ctx, env, "kubectl", "-n", "agentcask-system", "logs", "deploy/cask-controller")
+	waitPodDeleted(t, ctx, sessionNamespace, sessionID)
+	apiLogs := run(t, ctx, env, "kubectl", "-n", systemNamespace, "logs", "deploy/cask-api")
+	modelProxyLogs := run(t, ctx, env, "kubectl", "-n", systemNamespace, "logs", "deploy/cask-model-proxy")
+	controllerLogs := run(t, ctx, env, "kubectl", "-n", systemNamespace, "logs", "deploy/cask-controller")
 	assertNoLeak(t, "cask-api logs", apiLogs)
 	assertNoLeak(t, "cask-model-proxy logs", modelProxyLogs)
 	assertNoLeak(t, "cask-controller logs", controllerLogs)
@@ -173,7 +178,7 @@ func waitSessionRunning(t *testing.T, ctx context.Context, apiURL, id string) {
 	}
 }
 
-func waitPodDeleted(t *testing.T, ctx context.Context, sessionID string) {
+func waitPodDeleted(t *testing.T, ctx context.Context, namespace, sessionID string) {
 	t.Helper()
 	for {
 		select {
@@ -181,7 +186,7 @@ func waitPodDeleted(t *testing.T, ctx context.Context, sessionID string) {
 			t.Fatal(ctx.Err())
 		default:
 		}
-		cmd := exec.CommandContext(ctx, "kubectl", "-n", "agentcask-sessions", "get", "pod", "-l", "agentcask.aidev.samsungds.net/session-id="+sessionID, "--no-headers")
+		cmd := exec.CommandContext(ctx, "kubectl", "-n", namespace, "get", "pod", "-l", "agentcask.aidev.samsungds.net/session-id="+sessionID, "--no-headers")
 		out, _ := cmd.CombinedOutput()
 		if strings.TrimSpace(string(out)) == "" || strings.Contains(string(out), "No resources found") {
 			return
@@ -228,4 +233,11 @@ func assertNoLeak(t *testing.T, name, value string) {
 		t.Fatalf("%s exposed podName: %s", name, value)
 	}
 	_ = fmt.Sprintf
+}
+
+func envDefault(key, fallback string) string {
+	if value := os.Getenv(key); value != "" {
+		return value
+	}
+	return fallback
 }

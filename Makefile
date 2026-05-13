@@ -1,8 +1,13 @@
 KIND_CLUSTER ?= agentcask-mvp
 SESSION_NAMESPACE ?= agentcask-sessions
+KIND_HELM_RELEASE ?= agentcask-helm
+KIND_HELM_SYSTEM_NAMESPACE ?= agentcask-helm-system
+KIND_HELM_SESSION_NAMESPACE ?= agentcask-helm-sessions
+KIND_HELM_API_PORT ?= 18082
+KIND_HELM_MODEL_PROXY_PORT ?= 18083
 GOARCH ?= $(shell go env GOARCH)
 
-.PHONY: build linux-build test tidy helm-lint helm-template kind-up kind-build-images kind-load kind-deploy kind-test kind-down clean
+.PHONY: build linux-build test tidy helm-lint helm-template kind-up kind-build-images kind-load kind-deploy kind-test kind-helm-clean kind-helm-deploy kind-helm-test kind-down clean
 
 build:
 	go build -o bin/cask-api ./cmd/cask-api
@@ -20,7 +25,7 @@ helm-lint:
 	helm lint charts/agentcask
 
 helm-template:
-	helm template agentcask charts/agentcask --include-crds >/tmp/agentcask-helm.yaml
+	helm template agentcask charts/agentcask --namespace agentcask-system --include-crds >/tmp/agentcask-helm.yaml
 
 linux-build:
 	mkdir -p bin/linux
@@ -59,6 +64,20 @@ kind-deploy:
 
 kind-test: kind-up kind-load kind-deploy
 	RUN_KIND_E2E=1 CASKCTL_BIN=$(CURDIR)/bin/caskctl go test ./test/e2e/... -count=1 -timeout=5m
+
+kind-helm-clean:
+	-helm uninstall $(KIND_HELM_RELEASE) --namespace $(KIND_HELM_SYSTEM_NAMESPACE)
+	-kubectl -n $(KIND_HELM_SESSION_NAMESPACE) get agentsessions -o name | while read resource; do kubectl -n $(KIND_HELM_SESSION_NAMESPACE) patch $$resource --type=merge -p '{"metadata":{"finalizers":[]}}'; done
+	kubectl delete namespace $(KIND_HELM_SYSTEM_NAMESPACE) $(KIND_HELM_SESSION_NAMESPACE) --ignore-not-found=true --wait=true
+
+kind-helm-deploy:
+	helm upgrade --install $(KIND_HELM_RELEASE) charts/agentcask --namespace $(KIND_HELM_SYSTEM_NAMESPACE) --create-namespace --set namespaces.sessions.name=$(KIND_HELM_SESSION_NAMESPACE)
+	kubectl -n $(KIND_HELM_SYSTEM_NAMESPACE) rollout status deploy/cask-api --timeout=180s
+	kubectl -n $(KIND_HELM_SYSTEM_NAMESPACE) rollout status deploy/cask-model-proxy --timeout=180s
+	kubectl -n $(KIND_HELM_SYSTEM_NAMESPACE) rollout status deploy/cask-controller --timeout=180s
+
+kind-helm-test: kind-up kind-load kind-helm-clean kind-helm-deploy
+	RUN_KIND_E2E=1 CASKCTL_BIN=$(CURDIR)/bin/caskctl CASK_SYSTEM_NAMESPACE=$(KIND_HELM_SYSTEM_NAMESPACE) CASK_SESSION_NAMESPACE=$(KIND_HELM_SESSION_NAMESPACE) CASK_API_PORT=$(KIND_HELM_API_PORT) CASK_MODEL_PROXY_PORT=$(KIND_HELM_MODEL_PROXY_PORT) go test ./test/e2e/... -count=1 -timeout=5m
 
 kind-down:
 	kind delete cluster --name "$(KIND_CLUSTER)"
