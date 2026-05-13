@@ -1,0 +1,40 @@
+{{- if .Values.networkPolicy.enabled }}
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: agent-session-egress
+  namespace: {{ include "agentcask.sessionNamespace" . }}
+  labels:
+    {{- include "agentcask.labels" . | nindent 4 }}
+spec:
+  podSelector:
+    matchLabels:
+      agentcask.aidev.samsungds.net/component: agent-session
+  policyTypes:
+    - Egress
+  egress:
+    - to:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: {{ include "agentcask.systemNamespace" . }}
+          podSelector:
+            matchLabels:
+              app: {{ .Values.modelProxy.name }}
+      ports:
+        - protocol: TCP
+          port: {{ .Values.modelProxy.service.port }}
+    {{- if .Values.networkPolicy.allowDNS }}
+    - to:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: kube-system
+      ports:
+        - protocol: UDP
+          port: 53
+        - protocol: TCP
+          port: 53
+    {{- end }}
+    {{- with .Values.networkPolicy.extraEgress }}
+    {{- toYaml . | nindent 4 }}
+    {{- end }}
+{{- end }}
