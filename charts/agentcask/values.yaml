@@ -1,0 +1,163 @@
+nameOverride: ""
+fullnameOverride: ""
+
+commonLabels: {}
+commonAnnotations: {}
+imagePullSecrets: []
+
+namespaces:
+  system:
+    create: true
+    name: agentcask-system
+    labels: {}
+    annotations: {}
+  sessions:
+    create: true
+    name: agentcask-sessions
+    labels: {}
+    annotations: {}
+
+serviceAccounts:
+  create: true
+  api:
+    name: cask-api
+    annotations: {}
+  controller:
+    name: cask-controller
+    annotations: {}
+  modelProxy:
+    name: cask-model-proxy
+    annotations: {}
+  agentSession:
+    name: agent-session
+    annotations: {}
+
+rbac:
+  create: true
+  extraControllerRules: []
+
+sessionToken:
+  createSecret: true
+  secretName: cask-session-token
+  key: tokenSecret
+  value: dev-session-proxy-secret
+  existingSecret:
+    name: ""
+    key: tokenSecret
+
+api:
+  name: cask-api
+  replicaCount: 1
+  image:
+    repository: agentcask/cask-api
+    tag: dev
+    pullPolicy: IfNotPresent
+  args:
+    addr: ":8080"
+  service:
+    type: ClusterIP
+    port: 8080
+  ingress:
+    enabled: false
+    className: ""
+    annotations: {}
+    hosts: []
+    tls: []
+  podAnnotations: {}
+  podLabels: {}
+  resources: {}
+  podSecurityContext:
+    seccompProfile:
+      type: RuntimeDefault
+  securityContext:
+    allowPrivilegeEscalation: false
+    capabilities:
+      drop:
+        - ALL
+    readOnlyRootFilesystem: true
+    runAsNonRoot: true
+    runAsUser: 65532
+    runAsGroup: 65532
+  nodeSelector: {}
+  tolerations: []
+  affinity: {}
+
+modelProxy:
+  name: cask-model-proxy
+  replicaCount: 1
+  image:
+    repository: agentcask/cask-model-proxy
+    tag: dev
+    pullPolicy: IfNotPresent
+  args:
+    addr: ":8080"
+  service:
+    type: ClusterIP
+    port: 8080
+  upstream:
+    url: ""
+    createSecret: false
+    secretName: cask-model-proxy-upstream
+    key: upstreamKey
+    value: ""
+    existingSecret:
+      name: ""
+      key: upstreamKey
+  podAnnotations: {}
+  podLabels: {}
+  resources: {}
+  podSecurityContext:
+    seccompProfile:
+      type: RuntimeDefault
+  securityContext:
+    allowPrivilegeEscalation: false
+    capabilities:
+      drop:
+        - ALL
+    readOnlyRootFilesystem: true
+    runAsNonRoot: true
+    runAsUser: 65532
+    runAsGroup: 65532
+  nodeSelector: {}
+  tolerations: []
+  affinity: {}
+
+controller:
+  name: cask-controller
+  replicaCount: 1
+  image:
+    repository: agentcask/cask-controller
+    tag: dev
+    pullPolicy: IfNotPresent
+  runtimeImage:
+    repository: agentcask/agent-runtime
+    tag: dev
+  modelProxyURL: ""
+  podAnnotations: {}
+  podLabels: {}
+  resources: {}
+  podSecurityContext:
+    seccompProfile:
+      type: RuntimeDefault
+  securityContext:
+    allowPrivilegeEscalation: false
+    capabilities:
+      drop:
+        - ALL
+    readOnlyRootFilesystem: true
+    runAsNonRoot: true
+    runAsUser: 65532
+    runAsGroup: 65532
+  nodeSelector: {}
+  tolerations: []
+  affinity: {}
+
+networkPolicy:
+  enabled: true
+  allowDNS: true
+  extraEgress: []
+
+runtimeClass:
+  create: false
+  name: kata
+  handler: runc
