@@ -1,0 +1,106 @@
+{{- if .Values.rbac.create }}
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: {{ include "agentcask.rbacName" (dict "root" . "component" "cask-api") }}
+  labels:
+    {{- include "agentcask.componentLabels" (dict "root" . "component" "cask-api" "app" .Values.api.name) | nindent 4 }}
+rules:
+  - apiGroups: [agentcask.aidev.samsungds.net]
+    resources: [agentsessions]
+    verbs: [get, list, create, delete]
+  - apiGroups: [agentcask.aidev.samsungds.net]
+    resources: [agentsessions/status]
+    verbs: [get]
+  - apiGroups: [""]
+    resources: [pods]
+    verbs: [get]
+  - apiGroups: [""]
+    resources: [pods/exec]
+    verbs: [create]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: {{ include "agentcask.rbacName" (dict "root" . "component" "cask-model-proxy") }}
+  labels:
+    {{- include "agentcask.componentLabels" (dict "root" . "component" "cask-model-proxy" "app" .Values.modelProxy.name) | nindent 4 }}
+rules:
+  - apiGroups: [agentcask.aidev.samsungds.net]
+    resources: [agentsessions]
+    verbs: [get, list]
+  - apiGroups: [agentcask.aidev.samsungds.net]
+    resources: [agentsessions/status]
+    verbs: [get]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: {{ include "agentcask.rbacName" (dict "root" . "component" "cask-controller") }}
+  labels:
+    {{- include "agentcask.componentLabels" (dict "root" . "component" "cask-controller" "app" .Values.controller.name) | nindent 4 }}
+rules:
+  - apiGroups: [agentcask.aidev.samsungds.net]
+    resources: [agentsessions]
+    verbs: [get, list, watch, patch, update]
+  - apiGroups: [agentcask.aidev.samsungds.net]
+    resources: [agentsessions/status]
+    verbs: [get, patch, update]
+  - apiGroups: [agentcask.aidev.samsungds.net]
+    resources: [agentsessions/finalizers]
+    verbs: [update, patch]
+  - apiGroups: [""]
+    resources: [pods]
+    verbs: [get, list, watch, create, update, patch, delete]
+  - apiGroups: [node.k8s.io]
+    resources: [runtimeclasses]
+    verbs: [get, list]
+  {{- with .Values.rbac.extraControllerRules }}
+  {{- toYaml . | nindent 2 }}
+  {{- end }}
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: {{ include "agentcask.rbacName" (dict "root" . "component" "cask-api") }}
+  labels:
+    {{- include "agentcask.componentLabels" (dict "root" . "component" "cask-api" "app" .Values.api.name) | nindent 4 }}
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: {{ include "agentcask.rbacName" (dict "root" . "component" "cask-api") }}
+subjects:
+  - kind: ServiceAccount
+    name: {{ .Values.serviceAccounts.api.name }}
+    namespace: {{ include "agentcask.systemNamespace" . }}
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: {{ include "agentcask.rbacName" (dict "root" . "component" "cask-model-proxy") }}
+  labels:
+    {{- include "agentcask.componentLabels" (dict "root" . "component" "cask-model-proxy" "app" .Values.modelProxy.name) | nindent 4 }}
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: {{ include "agentcask.rbacName" (dict "root" . "component" "cask-model-proxy") }}
+subjects:
+  - kind: ServiceAccount
+    name: {{ .Values.serviceAccounts.modelProxy.name }}
+    namespace: {{ include "agentcask.systemNamespace" . }}
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: {{ include "agentcask.rbacName" (dict "root" . "component" "cask-controller") }}
+  labels:
+    {{- include "agentcask.componentLabels" (dict "root" . "component" "cask-controller" "app" .Values.controller.name) | nindent 4 }}
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: {{ include "agentcask.rbacName" (dict "root" . "component" "cask-controller") }}
+subjects:
+  - kind: ServiceAccount
+    name: {{ .Values.serviceAccounts.controller.name }}
+    namespace: {{ include "agentcask.systemNamespace" . }}
+{{- end }}
