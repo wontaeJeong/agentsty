@@ -20,6 +20,8 @@ config/crd/
 config/rbac/
 config/samples/
 deploy/kind/
+charts/agentcask/
+examples/
 test/e2e/
 ```
 
@@ -170,7 +172,25 @@ Acceptance criteria:
 - Agent runtime image includes `opencode` while E2E keeps deterministic terminal assertions on the stub adapter.
 - docs clearly state real Kata is not validated by kind unless runtime is installed.
 
-## Phase 9. Documentation and prompts
+## Phase 9. Helm chart packaging
+
+Implement:
+
+- `charts/agentcask` chart metadata, values, and schema.
+- CRD install through `crds/`.
+- templates for namespaces, ServiceAccounts/RBAC, `cask-api`, `cask-model-proxy`, `cask-controller`, NetworkPolicy, and optional RuntimeClass.
+- safe examples for kind values and `AgentSession`.
+
+Acceptance criteria:
+
+- `make helm-lint` passes.
+- `make helm-template` renders the chart with CRDs.
+- chart install in kind rolls out all three control-plane Deployments.
+- `make kind-helm-test` passes.
+- `caskctl` can create/connect/delete a session through the Helm-installed `cask-api`.
+- no chart values or examples contain real upstream credentials.
+
+## Phase 10. Documentation and prompts
 
 Update:
 

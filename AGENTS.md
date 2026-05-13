@@ -26,6 +26,8 @@ Avoid introducing product names centered on `agent-*` unless referring to the ge
 - End users must not access Agent Pods directly.
 - Do not create per-session Ingress by default.
 - Do not create per-session public Service by default.
+- The Helm chart must not expose `cask-model-proxy` or Agent Pods publicly.
+- The Helm chart should install runtime components into the Helm release namespace and keep the session namespace configurable.
 - Agent Pods are created by `cask-controller`, not by `cask-api`.
 - `AgentSession` is the internal orchestration API.
 - `caskctl` talks to `cask-api`, not to the Kubernetes API.
@@ -73,8 +75,9 @@ Required test categories:
 - caskctl command tests
 - kind-based integration/E2E tests
 - negative tests for secret leakage
+- Helm chart lint/template checks when chart files change
 
-Do not mark the MVP complete until `make test` and `make kind-test` pass.
+Do not mark the MVP complete until `make test`, `make helm-lint`, `make helm-template`, `make kind-test`, and `make kind-helm-test` pass.
 
 ## Required reading order
 
@@ -86,6 +89,7 @@ Do not mark the MVP complete until `make test` and `make kind-test` pass.
 6. `docs/CLI_SPEC.md`
 7. `docs/IMPLEMENTATION_PLAN.md`
 8. `docs/TEST_PLAN.md`
+9. `docs/HELM.md`
 
 ## Implementation preference
 
@@ -109,5 +113,7 @@ config/crd/
 config/rbac/
 config/samples/
 deploy/kind/
+charts/agentcask/
+examples/
 test/e2e/
 ```

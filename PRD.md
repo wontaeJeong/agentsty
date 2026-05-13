@@ -39,7 +39,8 @@ The MVP must provide:
 6. Optional runtime isolation via `isolationProfiles`.
 7. A secure model access pattern that prevents real API key leakage.
 8. Unit, integration, and kind-based E2E tests.
-9. Documentation and prompts suitable for Codex, Claude Code, and opencode.
+9. An installable MVP Helm chart.
+10. Documentation and prompts suitable for Codex, Claude Code, and opencode.
 
 ## 3. Non-goals
 
@@ -143,6 +144,19 @@ The runtime image should support:
 For early kind tests, a stub TUI command is acceptable.
 
 For MVP user sessions, `opencode` is the primary supported agent CLI. The `stub` tool remains only as a deterministic test adapter.
+
+### 4.6 Helm chart
+
+The MVP must provide a Helm chart that installs the same control-plane surface as the kind manifests:
+
+- `AgentSession` CRD under API group `agentcask.aidev.samsungds.net`.
+- `cask-api` Deployment and ClusterIP Service.
+- internal-only `cask-model-proxy` Deployment and ClusterIP Service.
+- `cask-controller` Deployment.
+- required ServiceAccounts/RBAC.
+- session namespace and minimal Agent Pod egress NetworkPolicy.
+
+The chart must not create per-session Ingress or public Service resources. It must not put real upstream model/API credentials in `values.yaml`, examples, AgentSession resources, or Agent Pod env/mounts. Upstream credentials, when needed, are referenced through an existing Kubernetes Secret consumed only by `cask-model-proxy`.
 
 ## 5. User workflows
 
@@ -280,14 +294,16 @@ The MVP is complete when:
 
 1. `make test` passes.
 2. `make kind-test` passes on a local kind cluster.
-3. CRDs install successfully.
-4. `cask-api` starts and exposes health endpoints.
-5. `cask-model-proxy` starts internally and exposes health endpoints.
-6. `cask-controller` starts and reconciles AgentSession.
-7. `caskctl session create` creates an AgentSession.
-8. Controller creates a corresponding Agent Pod.
-9. `caskctl session connect` attaches to the Pod through `cask-api` WebSocket terminal.
-10. `caskctl session delete` deletes the session and owned Pod.
-11. `isolation.profile=default` works in kind.
-12. `isolation.profile=kata` mapping is tested in kind with a fake/plumbing RuntimeClass or skipped unless available.
-13. No test exposes real model/API keys to AgentSession, Pod env, API response, terminal output, CLI output, or logs.
+3. `make helm-lint` and `make helm-template` pass.
+4. The Helm chart can install the MVP control plane into a Kubernetes cluster.
+5. CRDs install successfully.
+6. `cask-api` starts and exposes health endpoints.
+7. `cask-model-proxy` starts internally and exposes health endpoints.
+8. `cask-controller` starts and reconciles AgentSession.
+9. `caskctl session create` creates an AgentSession.
+10. Controller creates a corresponding Agent Pod.
+11. `caskctl session connect` attaches to the Pod through `cask-api` WebSocket terminal.
+12. `caskctl session delete` deletes the session and owned Pod.
+13. `isolation.profile=default` works in kind.
+14. `isolation.profile=kata` mapping is tested in kind with a fake/plumbing RuntimeClass or skipped unless available.
+15. No test exposes real model/API keys to AgentSession, Pod env, API response, terminal output, CLI output, or logs.
