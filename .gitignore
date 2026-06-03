@@ -207,6 +207,7 @@ cython_debug/
 
 # AI coding assistant local artifacts
 #  Keep shared guidance/config like AGENTS.md, opencode.json, and .codex/config.toml trackable.
+/.sisyphus/run-continuation/
 /.sisyphus/*.local.*
 
 # OpenCode local/runtime artifacts
