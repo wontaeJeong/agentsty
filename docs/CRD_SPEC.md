@@ -20,7 +20,7 @@ agentsessions.agentcask.aidev.samsungds.net
 
 ## 4. Version
 
-Use `v1alpha1` for MVP.
+The current version is `v1alpha1`; the production policy does not promote it to a stable version. Future schema/version changes require compatibility, migration/conversion and rollback analysis through an ADR.
 
 ## 5. Example
 
@@ -64,7 +64,7 @@ Do not trust user-submitted `userId` from public API requests.
 
 ### tool
 
-Allowed values for MVP:
+Baseline design values (not proof that every runtime integration is implemented):
 
 ```text
 opencode
@@ -75,7 +75,7 @@ hermes
 stub
 ```
 
-The implementation prioritizes `opencode` as the primary real tool. `stub` remains available as a deterministic test adapter.
+Currently `opencode` is the default real tool. Other runtimes may be prioritized by product requirements, with explicit implementation and real integration tests. `stub` remains a deterministic test adapter, not evidence of agent functionality.
 
 ### repo
 
@@ -87,7 +87,7 @@ repo:
   branch: string
 ```
 
-No Git credentials should be stored directly in this object for MVP.
+Never store Git credentials directly in this object; future credential integrations must preserve the secret boundary.
 
 ### modelRef
 
@@ -103,7 +103,7 @@ This is not a secret.
 
 ### resourceProfile
 
-Allowed MVP values:
+Baseline values (extend only through validated, compatible contract changes):
 
 ```text
 small
@@ -115,7 +115,7 @@ The controller maps profiles to CPU/memory/ephemeral-storage.
 
 ### isolation.profile
 
-Allowed MVP values:
+Baseline values (new isolation profiles are permitted with threat-model and runtime validation):
 
 ```text
 default

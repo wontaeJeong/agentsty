@@ -1,10 +1,10 @@
-# PRD: agentcask MVP
+# PRD: agentcask
 
 ## 1. Summary
 
 `agentcask` is a Kubernetes-native platform for running interactive coding agents in isolated Pod sessions.
 
-The MVP will implement a CLI-first workflow:
+The current development baseline provides a CLI workflow:
 
 ```text
 caskctl
@@ -17,7 +17,7 @@ caskctl
   -> caskctl terminal session
 ```
 
-The MVP must support TUI-based tools such as:
+The product may support multiple TUI-based tools, including:
 
 - Claude Code
 - Codex CLI
@@ -25,11 +25,13 @@ The MVP must support TUI-based tools such as:
 - OpenClaw
 - Hermes
 
-The MVP exposes no Web UI. `caskctl` is the primary client.
+Currently `caskctl` is the client and no Web UI is implemented. Web UI and administration portals are allowed product extensions, not prohibited scope. The list above is a target compatibility set, not a claim that every integration is implemented or validated. New runtime priorities follow user requirements and security/operational evidence rather than a permanent OpenCode-first policy.
+
+This PRD owns product purpose and user workflows. [Production requirements](docs/PRODUCTION_REQUIREMENTS.md) define target capabilities, the [roadmap](docs/PRODUCTION_ROADMAP.md) sequences follow-up work, and [release criteria](docs/RELEASE_CRITERIA.md) define completion evidence. This policy transition does not certify the current implementation for production.
 
 ## 2. Goals
 
-The MVP must provide:
+The existing baseline is organized around:
 
 1. A working `cask-api` server.
 2. A working `cask-controller`.
@@ -41,25 +43,24 @@ The MVP must provide:
 8. Unit, integration, and kind-based E2E tests.
 9. Documentation and prompts suitable for Codex, Claude Code, and opencode.
 
-## 3. Non-goals
+## 3. Scope and permanent security boundaries
 
-The MVP will not include:
+Production development is not capped at the initial feature set. Portals, organization/permission management, quota/billing, advanced model gateways, Vault/SPIFFE/External Secrets, persistent workspaces, session recovery, HA and horizontal scaling may be designed and introduced based on requirements. They are not implemented by this policy change and specific technologies are not compulsory.
 
-- A portal or Web UI.
-- Per-session Ingress.
-- Per-session public Service.
-- Direct user access to Agent Pods.
-- Direct exposure of Kubernetes API to end users.
-- Real provider/model API keys inside Agent Pods.
-- Vault/SPIFFE/ExternalSecrets.
-- Billing, quota, or organization management.
-- Production-grade model gateway features beyond the minimum proxy/token model.
+Retained security boundaries:
+
+- No direct end-user Kubernetes API or Agent Pod access through product clients; never grant unrestricted Kubernetes access.
+- No real upstream provider/model API keys inside Agent Pods or user-visible artifacts.
+- No per-session public Service or Ingress by default; use authenticated, authorized product gateways and private networks.
+- Least-privilege RBAC and isolation for untrusted code, resources and data across users/sessions.
+
+This change does not implement large product features or change runtime contracts. Structural changes require an ADR, threat modeling and API/CRD compatibility analysis.
 
 ## 4. Core components
 
 ### 4.1 cask-api
 
-`cask-api` is the only externally exposed server.
+`cask-api` is the currently externally exposed server. Approved UI or gateway services may be added without exposing Agent Pods or the internal model proxy directly.
 
 Responsibilities:
 
@@ -76,7 +77,7 @@ Responsibilities:
 
 Responsibilities:
 
-- Minimal model proxy for MVP.
+- Internal model proxy, extensible for provider/model requirements without exposing upstream credentials.
 - Session proxy token validation.
 - Upstream model credential storage.
 - Redaction of secrets in logs and errors.
@@ -116,7 +117,7 @@ The CRD must not contain real model/API keys.
 
 `caskctl` is the CLI used by end users.
 
-Required MVP commands:
+Current baseline commands:
 
 ```bash
 caskctl session create
@@ -130,7 +131,7 @@ caskctl session delete <session-id>
 
 ### 4.5 Agent runtime image
 
-The MVP may use one runtime image containing shell tools, `opencode`, and at least one test adapter command.
+The current baseline uses one runtime image containing shell tools, `opencode`, and a test adapter command. Multiple runtime images/adapters are permitted when tested and supported explicitly.
 
 The runtime image should support:
 
@@ -142,7 +143,7 @@ The runtime image should support:
 
 For early kind tests, a stub TUI command is acceptable.
 
-For MVP user sessions, `opencode` is the primary supported agent CLI. The `stub` tool remains only as a deterministic test adapter.
+Currently `opencode` is the default agent CLI. This is a current implementation choice, not a permanent priority over other agents. The `stub` tool remains only a deterministic test adapter; it does not demonstrate real agent/provider integration.
 
 ## 5. User workflows
 
@@ -204,7 +205,7 @@ Expected result:
 
 ## 6. Isolation profiles
 
-The MVP must use an `isolationProfiles` structure.
+Use an `isolationProfiles` structure to preserve a stable user-facing isolation contract. New profiles and dynamic policies may be introduced through compatible, validated changes.
 
 User-facing input:
 
@@ -234,7 +235,7 @@ Rules:
 
 ## 7. API key leakage prevention
 
-This is a hard MVP requirement.
+This is a permanent security requirement, independent of delivery scope.
 
 Real model/API keys must never appear in:
 
@@ -249,7 +250,7 @@ Real model/API keys must never appear in:
 - cask-api logs
 - caskctl output
 
-The MVP must use this pattern:
+Preserve this credential isolation pattern as the product evolves:
 
 ```text
 Agent Pod
@@ -274,9 +275,9 @@ Agent Pods must not receive:
 
 If a CLI requires an environment variable named like `OPENAI_API_KEY` or `ANTHROPIC_API_KEY`, the value must be a short-lived proxy token, never the real upstream key.
 
-## 8. MVP acceptance criteria
+## 8. Regression baseline and production acceptance
 
-The MVP is complete when:
+The following initial regression checks remain useful but are not a product Definition of Done. Production releases and new features must additionally meet [Release Criteria](docs/RELEASE_CRITERIA.md). A test skip or fake runtime is not real isolation evidence.
 
 1. `make test` passes.
 2. `make kind-test` passes on a local kind cluster.

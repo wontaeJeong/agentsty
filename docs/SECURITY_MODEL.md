@@ -1,4 +1,6 @@
-# Security Model: MVP
+# Security Model
+
+These are mandatory security requirements, not a claim that every deployment already enforces them. Verify enforcement through [Release Criteria](RELEASE_CRITERIA.md). Architecture flexibility never waives these boundaries.
 
 ## 1. Primary security boundary
 
@@ -9,6 +11,8 @@ The security boundary must be:
 ```text
 user -> cask-api -> Kubernetes API -> isolated Agent Pod
 ```
+
+This is the current access path. Additional authenticated product gateways or portals may be introduced by ADR without granting users direct Kubernetes/Pod access. Authenticate and authorize each user/session operation, including terminal and model access. Enforce ownership/tenant boundaries, permission expiry/revocation and deny-by-default behavior; do not trust a request-supplied identity. Untrusted code must execute with isolation matched to its threat model, not unrestricted host authority.
 
 Users never directly access:
 
@@ -41,7 +45,7 @@ Only `cask-model-proxy` may hold upstream credentials.
 
 ## 3. Model proxy pattern
 
-MVP model access:
+Credential-isolated model access:
 
 ```text
 Agent Pod
@@ -115,7 +119,7 @@ get RuntimeClass
 
 ### Agent Pod ServiceAccount
 
-Should have minimal or no Kubernetes API permissions.
+Must have only explicitly justified minimal Kubernetes API permissions, preferably none.
 
 Do not mount a powerful service account into Agent Pods.
 
@@ -145,13 +149,15 @@ capabilities.drop: ["ALL"]
 
 ## 7. Network policy
 
-MVP should aim to restrict Agent Pod egress to:
+Production must enforce private-by-default networking and an explicit egress allow-list for Agent Pods, such as:
 
 - `cask-model-proxy` model proxy
 - Git endpoint if needed
 - package mirrors if explicitly allowed
 
 Agent Pods should not be able to reach arbitrary internal services by default.
+
+Enforce resource and data separation across users/sessions, including storage ownership, cleanup/retention, network reachability and shared-service authorization. Choose isolation strength by threat model; omitting runtimeClassName or passing fake RuntimeClass plumbing is not proof of safe hostile multitenant execution. Validate actual enforcement in the target cluster.
 
 ## 8. Logging
 
@@ -178,3 +184,9 @@ Add negative tests proving:
 - Pod env does not contain real upstream key values.
 - API responses do not echo secrets.
 - logs redact sensitive header names/values.
+
+Also verify cross-user/session/tenant denial, expired/revoked credentials, least-privilege RBAC, actual network policy and runtime isolation, resource contention and cleanup/recovery. Test doubles alone cannot validate these deployment boundaries.
+
+## 10. Production security evolution
+
+Vault, SPIFFE, External Secrets, OIDC and other reviewed integrations are allowed, not excluded by historical scope. Specific technologies are optional; required security outcomes are not. Document token/key rotation, revocation, incident response and dependency-failure behavior. Only the internal `cask-model-proxy` credential boundary may hold upstream model credentials; new gateway capabilities must not distribute those keys to Agent Pods or public-facing components.

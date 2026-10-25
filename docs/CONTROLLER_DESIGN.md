@@ -1,4 +1,6 @@
-# Controller Design: cask-controller MVP
+# Controller Design: cask-controller
+
+This is the baseline controller design, not proof that every optional resource or behavior is implemented. Event-driven reconciliation, persistence/recovery and dynamic resource/isolation policies are permitted through justified ADRs with compatible CRD evolution. Use [Release Criteria](RELEASE_CRITERIA.md), including restart, partial failure, idempotency and multi-session tests, for production acceptance.
 
 ## 1. Reconcile overview
 
@@ -29,7 +31,7 @@ The controller must set owner references where appropriate.
 
 ## 3. Pod creation
 
-MVP Pod model:
+Baseline Pod model:
 
 ```yaml
 apiVersion: v1
@@ -161,7 +163,7 @@ Messages must be redacted.
 
 If `createdAt + ttlSeconds < now`, controller should:
 
-1. mark session `Expired` or delete it depending on MVP policy.
+1. mark session `Expired` or delete it according to an explicit lifecycle/retention policy. Define recovery and workspace retention guarantees before production use; this design does not assert durable recovery support.
 2. delete owned Pod/PVC/Secret/ConfigMap.
 3. close terminal indirectly by Pod deletion.
 

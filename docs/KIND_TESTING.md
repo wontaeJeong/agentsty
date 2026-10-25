@@ -2,7 +2,7 @@
 
 ## 1. Purpose
 
-kind tests validate the MVP control plane and terminal path locally.
+kind tests validate the baseline control plane and terminal path locally. They do not certify production readiness, real provider functionality, HA, load capacity, recovery or hostile multitenant isolation. See [Release Criteria](RELEASE_CRITERIA.md) for required additional evidence.
 
 The E2E flow uses the deterministic `stub` tool for terminal assertions, but it also checks that the Agent Pod uses the derived runtime image and contains `opencode`, Git, SSH, and tmux. The runtime extends `ghcr.io/anomalyco/opencode:1.14.48`; the upstream image alone lacks the repository and persistent-terminal tools. E2E port forwards automatically allocate free local ports rather than claiming the manual testing ports 18080/18081.
 
@@ -106,11 +106,11 @@ Then clean up:
 ./bin/caskctl session delete <session-id>
 ```
 
-For user-like MVP testing, omit `--tool` or set `--tool opencode`; `opencode` is the default. For terminal gateway assertions, prefer `--tool stub` because it does not depend on model/provider behavior.
+For user-like baseline testing, omit `--tool` or set `--tool opencode`; `opencode` is the current default, not a permanent runtime priority. For terminal gateway assertions, prefer `--tool stub` because it does not depend on model/provider behavior. `dev-token` and port-forwarding examples are local development mechanisms, not production authentication/deployment.
 
 ## 4. Test cluster setup
 
-Recommended kind cluster name:
+Existing kind cluster name (kept for compatibility, not a product scope restriction):
 
 ```text
 agentcask-mvp

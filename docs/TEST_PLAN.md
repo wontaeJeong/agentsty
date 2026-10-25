@@ -1,6 +1,10 @@
-# Test Plan: agentcask MVP
+# Test Plan: agentcask
+
+This document owns test layers and their limits; [Release Criteria](RELEASE_CRITERIA.md) owns production acceptance. Existing local and fake-backed checks remain valuable regression coverage, not a complete product gate. Test automation may use Stub/Mock/Fake, but real feature completion requires real integration evidence.
 
 ## 1. Required commands
+
+These commands cover existing regression paths, not all production scenarios. `make test` can skip opt-in kind/runtime tests; report each executed path and skip separately.
 
 ```bash
 make test
@@ -164,3 +168,19 @@ On a real Kata cluster:
 - run `isolation.profile=kata`.
 - verify Pod has `spec.runtimeClassName=kata`.
 - verify Pod starts.
+
+Also validate the actual runtime isolation boundary against the deployment threat model; a Running Pod alone does not prove safe hostile multitenancy.
+
+## 12. Production validation targets
+
+The following are required evidence targets for relevant features, not claims that corresponding automated suites already exist:
+
+- Real identity/session authorization: expired/revoked credentials, cross-user/session/tenant denial and privilege escalation attempts.
+- Actual RBAC, network, data/storage and execution isolation on the target runtime/cluster, including resource contention and cleanup/retention.
+- Real supported agent/provider user workflows; stub output and binary presence do not prove model functionality.
+- Concurrent users/sessions at documented target load, measuring latency, throughput, errors, CPU/memory/storage/network budgets and failure propagation.
+- Dependency/component/node failure injection, reconnect, timeout, partial failure, cleanup retries and recovery-time/data-loss bounds; backup/restore where state persists.
+- Supported API/CRD/client compatibility, reproducible deployment, upgrade/migration and rollback.
+- Redacted observability/audit signals, alert delivery and operator recovery procedures.
+
+Record environment/versions, targets, units, commands, results and evidence links using Release Criteria. Missing targets or unexecuted checks remain unmet. Do not invent numeric budgets or equate kind success with HA/performance/isolation validation.

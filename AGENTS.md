@@ -2,7 +2,7 @@
 
 ## Project
 
-This repository implements the **agentcask MVP**.
+This repository develops **agentcask** as a production service. Existing implementation and local tests are a development baseline, not evidence of production readiness.
 
 Product/component naming:
 
@@ -18,10 +18,10 @@ Avoid introducing product names centered on `agent-*` unless referring to the ge
 
 ## Architecture rules
 
-- `cask-api` is the only externally exposed runtime component.
-- `cask-api` includes REST API and WebSocket terminal gateway for MVP.
-- `cask-model-proxy` is internal-only and handles minimal model proxy traffic.
-- There is no Web UI in the MVP.
+- Currently, `cask-api` is the externally exposed runtime component and includes REST API and the WebSocket terminal gateway. This topology is not permanent.
+- Web UI/admin portals, a separate terminal gateway, provider-specific gateways, persistence, OIDC, event-driven reconciliation, dynamic resource/isolation policies, session recovery, multiple agent runtimes, organizations, quota and billing are permitted when justified by product requirements.
+- Keep `cask-model-proxy` internal-only. Its capabilities may expand; do not impose a minimum-proxy feature ceiling.
+- Use `docs/DESIGN_DECISIONS.md` for justified architecture changes, including threat model, operational tradeoffs and API/CRD compatibility/migration. Do not sacrifice reliability or scalability merely for implementation speed, or add abstraction without a concrete requirement.
 - End users must not access Kubernetes API directly.
 - End users must not access Agent Pods directly.
 - Do not create per-session Ingress by default.
@@ -43,6 +43,8 @@ Real model/API keys must never be placed in:
 - logs
 
 Only `cask-model-proxy` may hold upstream model credentials.
+
+Security boundaries remain mandatory regardless of topology: authenticate and authorize every user/session operation, apply least-privilege RBAC, isolate users' and sessions' resources/data, and keep networks private by default. Treat agent code as untrusted; do not run it without isolation appropriate to the threat model. Production security guarantees require deployment-specific evidence, not merely a documented target. Vault, SPIFFE and External Secrets are allowed security integration choices, not mandatory products.
 
 Agent Pods may receive only:
 
@@ -74,7 +76,7 @@ Required test categories:
 - kind-based integration/E2E tests
 - negative tests for secret leakage
 
-Do not mark the MVP complete until `make test` and `make kind-test` pass.
+`make test` and `make kind-test` are regression baselines, not sufficient production acceptance. Stub/Mock/Fake are for testing and do not prove a real service integration is complete. Every new feature must satisfy `docs/RELEASE_CRITERIA.md`, including real user scenarios, security, failure/recovery, multi-user/session behavior, stable contracts, observability, scalability/maintainability, reproducible configuration/deployment, documentation/runbooks and measurable performance/resource criteria. Record unexecuted checks honestly; never claim production readiness from local kind plumbing alone.
 
 ## Required reading order
 
@@ -86,10 +88,14 @@ Do not mark the MVP complete until `make test` and `make kind-test` pass.
 6. `docs/CLI_SPEC.md`
 7. `docs/IMPLEMENTATION_PLAN.md`
 8. `docs/TEST_PLAN.md`
+9. `docs/PRODUCTION_REQUIREMENTS.md`
+10. `docs/PRODUCTION_ROADMAP.md`
+11. `docs/RELEASE_CRITERIA.md`
+12. `docs/DESIGN_DECISIONS.md`
 
 ## Implementation preference
 
-Use Go for MVP components unless the repository already mandates otherwise.
+Retain Go for core services and Kubernetes CRDs as existing assets. Other components may use appropriate technologies with a documented rationale. Current CLI/OpenCode defaults do not impose permanent client or runtime priorities.
 
 Recommended layout:
 

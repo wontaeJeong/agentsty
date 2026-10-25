@@ -1,8 +1,17 @@
-# agentcask MVP
+# agentcask
 
-`agentcask`는 격리된 대화형 Agent 세션을 Kubernetes 위에서 실행하기 위한 CLI-first 플랫폼입니다. MVP는 `cask-api`, 내부 전용 `cask-model-proxy`, `cask-controller`, `caskctl`, `AgentSession` CRD, WebSocket 터미널 게이트웨이로 구성됩니다.
+`agentcask`는 격리된 대화형 Agent 세션을 Kubernetes 위에서 실행하는 플랫폼으로, 정식 Production 서비스를 목표로 개발합니다. 현재 구현 기준선은 `cask-api`, 내부 전용 `cask-model-proxy`, `cask-controller`, `caskctl`, `AgentSession` CRD, WebSocket 터미널 게이트웨이입니다. 이 정책 전환이 현재 구현의 Production Ready 인증을 뜻하지는 않습니다.
 
-`opencode`가 기본 MVP Agent 도구입니다. `caskctl session create`는 기본적으로 `--tool opencode`를 사용하며, Agent Pod는 공개 이미지 `ghcr.io/anomalyco/opencode:1.14.48`에 Git·SSH·tmux와 테스트 어댑터를 추가한 `agentcask/agent-runtime:dev`를 기본으로 사용합니다. 터미널 경로를 결정적으로 테스트할 때는 `stub` 도구를 사용할 수 있습니다.
+`opencode`가 현재 기본 Agent 도구입니다. `caskctl session create`는 기본적으로 `--tool opencode`를 사용하며, Agent Pod는 공개 이미지 `ghcr.io/anomalyco/opencode:1.14.48`에 Git·SSH·tmux와 테스트 어댑터를 추가한 `agentcask/agent-runtime:dev`를 기본으로 사용합니다. 터미널 경로를 결정적으로 테스트할 때는 `stub` 도구를 사용할 수 있지만 실제 모델 연동 성공의 증거는 아닙니다. 다른 Agent Runtime 지원을 영구 후순위로 두지 않습니다.
+
+## 개발 정책과 Production 기준
+
+- [Production 요구사항](docs/PRODUCTION_REQUIREMENTS.md): 모든 기능의 필수 품질·보안 역량과 요구에 따른 선택 기능.
+- [Production 로드맵](docs/PRODUCTION_ROADMAP.md): 현재 상태, 후속 작업, 의존성과 미확보 증거.
+- [Production Quality Gate](docs/RELEASE_CRITERIA.md): 실제 사용자 시나리오, 인증·인가, 복구, 다중 사용자/세션, 관측성, 계약·배포, 문서, 성능·자원 기준.
+- [설계 결정/ADR](docs/DESIGN_DECISIONS.md): 초기 결정 이력과 구조 변경 근거·호환성 관리.
+
+Web UI/관리 포털, 독립 Terminal Gateway, 고급 모델 gateway, 영속화, OIDC/보안 통합, 조직·quota/billing, HA·수평 확장 및 복수 런타임을 요구사항에 따라 도입할 수 있습니다. 이번 작업은 정책·문서 전환이며 해당 기능의 구현 완료를 뜻하지 않습니다. Mock/Fake/Stub 또는 kind 성공만으로 서비스 전체를 완료 처리하지 않습니다.
 
 ## 빠른 검증
 
@@ -23,7 +32,7 @@ make kind-test
 - kubectl
 - 선택: Helm, Helm 차트 설치 경로를 테스트할 때만 필요
 
-현재 MVP는 Web UI가 없습니다. 사용자는 `caskctl`만 사용하며, `caskctl`은 Kubernetes API가 아니라 `cask-api`에만 접속합니다.
+현재 구현에는 Web UI가 없으며 제공된 사용자 클라이언트는 `caskctl`입니다. 이는 UI 개발 금지가 아닙니다. `caskctl`은 Kubernetes API가 아니라 `cask-api`에만 접속합니다. 아래 dev-token·로컬 이미지·포트 포워딩은 개발 검증용이며 Production 배포 구성이 아닙니다.
 
 ### 2. 로컬 바이너리 빌드
 
@@ -210,11 +219,13 @@ make clean
 - 아키텍처: `docs/ARCHITECTURE.md`
 - CI/CD: `docs/CI_CD.md`
 
-## MVP 제약
+## 현재 구현의 한계와 유지할 보안 경계
 
 - Web UI는 구현되어 있지 않습니다.
-- 외부로 노출되는 런타임 컴포넌트는 `cask-api`뿐입니다.
+- 현재 배포에서 외부로 노출되는 런타임 컴포넌트는 `cask-api`뿐입니다. 인증·인가와 보안 경계를 지키는 UI/gateway 확장은 ADR로 허용합니다.
 - `cask-model-proxy`는 내부 전용이며 upstream 모델/API 키를 보관할 수 있는 유일한 컴포넌트입니다.
 - Agent Pod에는 내부 `cask-model-proxy` URL, 짧은 수명의 세션 proxy token, projected service account token만 전달됩니다.
 - 세션별 Ingress 또는 public Service는 기본 생성하지 않습니다.
 - kind의 Kata isolation 테스트는 plumbing 검증용입니다. `isolation.profile=kata -> pod.spec.runtimeClassName=kata` 매핑만 확인하며 실제 Kata VM 격리를 검증하지 않습니다.
+- 실제 다중 사용자/세션·provider 연동, 장애 복구, 부하·성능, 운영 및 격리 보장은 별도 Production 환경 증거가 필요합니다. `make test`의 opt-in E2E skip은 kind/runtime E2E 실행으로 세지 않습니다.
+- `agentcask-mvp` 클러스터명은 기존 테스트와의 호환성을 위해 유지한 식별자이며 제품 범위 제한이 아닙니다.

@@ -18,20 +18,22 @@ spec:
   runtimeClassName: kata
 ```
 
-## 2. MVP profiles
+## 2. Baseline profiles and extensions
 
-Required profiles:
+Existing baseline profiles:
 
 ```text
 default
 kata
 ```
 
-Optional future profile:
+Example extension (not a claim of current support):
 
 ```text
 gvisor
 ```
+
+Additional profiles and dynamic isolation policies are allowed with validated API/CRD changes and an ADR. Each production profile must meet its threat model in a real target environment. `default` omitting runtimeClassName does not prove strong isolation for hostile multitenant code.
 
 ## 3. Config structure
 
