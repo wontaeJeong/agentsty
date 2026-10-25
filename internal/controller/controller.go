@@ -36,10 +36,12 @@ type Reconciler struct {
 	Now     func() time.Time
 }
 
+const DefaultRuntimeImage = "agentcask/agent-runtime:dev"
+
 func DefaultConfig() Config {
 	return Config{
 		Namespace:         kube.DefaultSessionNamespace,
-		RuntimeImage:      "agentcask/agent-runtime:dev",
+		RuntimeImage:      DefaultRuntimeImage,
 		ModelProxyURL:     "http://cask-model-proxy.agentcask-system.svc.cluster.local:8080/internal/model-proxy/v1",
 		TokenSecret:       "dev-session-proxy-secret",
 		Profiles:          isolation.DefaultProfiles(),
@@ -203,6 +205,11 @@ func BuildPod(session *agentv1.AgentSession, cfg Config, profile isolation.Profi
 				Stdin:           true,
 				TTY:             true,
 				Env: []corev1.EnvVar{
+					{Name: "HOME", Value: "/tmp/cask"},
+					{Name: "XDG_CACHE_HOME", Value: "/tmp/cask/.cache"},
+					{Name: "XDG_CONFIG_HOME", Value: "/tmp/cask/.config"},
+					{Name: "XDG_DATA_HOME", Value: "/tmp/cask/.local/share"},
+					{Name: "OPENCODE_DISABLE_AUTOUPDATE", Value: "true"},
 					{Name: "CASK_MODEL_BASE_URL", Value: cfg.ModelProxyURL},
 					{Name: "CASK_SESSION_TOKEN", Value: token},
 					{Name: "OPENAI_BASE_URL", Value: cfg.ModelProxyURL},

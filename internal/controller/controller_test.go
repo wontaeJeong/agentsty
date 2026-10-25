@@ -54,6 +54,14 @@ func TestBuildPodUsesProxyTokenNotUpstreamKey(t *testing.T) {
 	if !foundProxyURL || !foundProxyToken {
 		t.Fatalf("pod env missing proxy URL/token: %#v", container.Env)
 	}
+	if container.Image != DefaultRuntimeImage {
+		t.Fatalf("default runtime image should use derived OpenCode image, got %q", container.Image)
+	}
+	for _, name := range []string{"HOME", "XDG_CACHE_HOME", "XDG_CONFIG_HOME", "XDG_DATA_HOME", "OPENCODE_DISABLE_AUTOUPDATE"} {
+		if !hasEnv(container.Env, name) {
+			t.Fatalf("pod env missing %s for derived OpenCode runtime: %#v", name, container.Env)
+		}
+	}
 }
 
 func TestBuildPodAppliesKataProfile(t *testing.T) {
@@ -120,3 +128,12 @@ func TestReconcileFailsMissingRuntimeClass(t *testing.T) {
 }
 
 var _ = corev1.PodRunning
+
+func hasEnv(env []corev1.EnvVar, name string) bool {
+	for _, item := range env {
+		if item.Name == name {
+			return true
+		}
+	}
+	return false
+}

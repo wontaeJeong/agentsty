@@ -1,6 +1,7 @@
 package e2e
 
 import (
+	"bufio"
 	"bytes"
 	"context"
 	"encoding/json"
@@ -23,28 +24,8 @@ func TestKindCreateConnectDeleteFlow(t *testing.T) {
 	}
 	ctx, cancel := context.WithTimeout(context.Background(), 4*time.Minute)
 	defer cancel()
-	apiURL := "http://127.0.0.1:18080"
-	modelProxyURL := "http://127.0.0.1:18081"
-	portForward := exec.CommandContext(ctx, "kubectl", "-n", "agentcask-system", "port-forward", "svc/cask-api", "18080:8080")
-	portForward.Stdout = io.Discard
-	portForward.Stderr = io.Discard
-	if err := portForward.Start(); err != nil {
-		t.Fatalf("start port-forward: %v", err)
-	}
-	defer func() {
-		_ = portForward.Process.Kill()
-		_ = portForward.Wait()
-	}()
-	modelProxyForward := exec.CommandContext(ctx, "kubectl", "-n", "agentcask-system", "port-forward", "svc/cask-model-proxy", "18081:8080")
-	modelProxyForward.Stdout = io.Discard
-	modelProxyForward.Stderr = io.Discard
-	if err := modelProxyForward.Start(); err != nil {
-		t.Fatalf("start model proxy port-forward: %v", err)
-	}
-	defer func() {
-		_ = modelProxyForward.Process.Kill()
-		_ = modelProxyForward.Wait()
-	}()
+	apiURL := startPortForward(t, ctx, "cask-api")
+	modelProxyURL := startPortForward(t, ctx, "cask-model-proxy")
 	waitHTTP(t, ctx, apiURL+"/healthz")
 	waitHTTP(t, ctx, modelProxyURL+"/healthz")
 	caskctl := os.Getenv("CASKCTL_BIN")
@@ -61,8 +42,11 @@ func TestKindCreateConnectDeleteFlow(t *testing.T) {
 	if !strings.Contains(agentPodYAML, "cask-model-proxy.agentcask-system.svc.cluster.local") {
 		t.Fatalf("agent pod does not point at separated model proxy service: %s", agentPodYAML)
 	}
+	if !strings.Contains(agentPodYAML, "image: agentcask/agent-runtime:dev") {
+		t.Fatalf("agent pod is not using the derived OpenCode runtime image: %s", agentPodYAML)
+	}
 	agentPodName := strings.TrimSpace(run(t, ctx, env, "kubectl", "-n", "agentcask-sessions", "get", "pod", "-l", "agentcask.aidev.samsungds.net/session-id="+sessionID, "-o", "jsonpath={.items[0].metadata.name}"))
-	opencodeOut := run(t, ctx, env, "kubectl", "-n", "agentcask-sessions", "exec", agentPodName, "--", "/bin/sh", "-lc", "command -v opencode >/dev/null && opencode --version")
+	opencodeOut := run(t, ctx, env, "kubectl", "-n", "agentcask-sessions", "exec", agentPodName, "--", "/bin/sh", "-ec", "opencode --version; git --version; ssh -V; tmux -V")
 	if strings.TrimSpace(opencodeOut) == "" {
 		t.Fatal("agent runtime image did not report an opencode version")
 	}
@@ -92,6 +76,46 @@ func TestKindCreateConnectDeleteFlow(t *testing.T) {
 	assertNoLeak(t, "cask-api logs", apiLogs)
 	assertNoLeak(t, "cask-model-proxy logs", modelProxyLogs)
 	assertNoLeak(t, "cask-controller logs", controllerLogs)
+}
+
+func startPortForward(t *testing.T, ctx context.Context, service string) string {
+	t.Helper()
+	cmd := exec.CommandContext(ctx, "kubectl", "-n", "agentcask-system", "port-forward", "--address=127.0.0.1", "svc/"+service, ":8080")
+	stdout, err := cmd.StdoutPipe()
+	if err != nil {
+		t.Fatal(err)
+	}
+	cmd.Stderr = os.Stderr
+	if err := cmd.Start(); err != nil {
+		t.Fatalf("start %s port-forward: %v", service, err)
+	}
+	t.Cleanup(func() {
+		_ = cmd.Process.Kill()
+		_ = cmd.Wait()
+	})
+	ready := make(chan string, 1)
+	go func() {
+		defer close(ready)
+		scanner := bufio.NewScanner(stdout)
+		for scanner.Scan() {
+			var port int
+			if _, err := fmt.Sscanf(scanner.Text(), "Forwarding from 127.0.0.1:%d -> 8080", &port); err == nil {
+				ready <- fmt.Sprintf("http://127.0.0.1:%d", port)
+			}
+		}
+	}()
+	select {
+	case url := <-ready:
+		if url == "" {
+			t.Fatalf("%s port-forward exited before becoming ready", service)
+		}
+		return url
+	case <-ctx.Done():
+		t.Fatal(ctx.Err())
+	case <-time.After(20 * time.Second):
+		t.Fatalf("timed out starting %s port-forward", service)
+	}
+	return ""
 }
 
 func postModelProxy(t *testing.T, ctx context.Context, baseURL, token string) string {

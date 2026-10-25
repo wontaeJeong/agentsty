@@ -4,6 +4,8 @@
 
 ```bash
 make test
+make kind-build-images
+make runtime-test
 make helm-lint
 make helm-template
 make kind-test
