@@ -8,15 +8,17 @@
 
 - [Production 요구사항](docs/PRODUCTION_REQUIREMENTS.md): 모든 기능의 필수 품질·보안 역량과 요구에 따른 선택 기능.
 - [Production 로드맵](docs/PRODUCTION_ROADMAP.md): 현재 상태, 후속 작업, 의존성과 미확보 증거.
+- [Production 구현 백로그](docs/PRODUCTION_BACKLOG.md): 최신 코드에서 재확인한 P0/P1/P2 결함과 독립 구현 단위.
 - [Production Quality Gate](docs/RELEASE_CRITERIA.md): 실제 사용자 시나리오, 인증·인가, 복구, 다중 사용자/세션, 관측성, 계약·배포, 문서, 성능·자원 기준.
 - [설계 결정/ADR](docs/DESIGN_DECISIONS.md): 초기 결정 이력과 구조 변경 근거·호환성 관리.
 
-Web UI/관리 포털, 독립 Terminal Gateway, 고급 모델 gateway, 영속화, OIDC/보안 통합, 조직·quota/billing, HA·수평 확장 및 복수 런타임을 요구사항에 따라 도입할 수 있습니다. 이번 작업은 정책·문서 전환이며 해당 기능의 구현 완료를 뜻하지 않습니다. Mock/Fake/Stub 또는 kind 성공만으로 서비스 전체를 완료 처리하지 않습니다.
+Web UI/관리 포털, 독립 Terminal Gateway, 고급 모델 gateway, 영속화, 조직·quota/billing, HA·수평 확장 및 복수 런타임을 요구사항에 따라 도입할 수 있습니다. API의 JWT/JWKS 검증과 세션 소유권 경계가 구현되어 있으나 CLI device login/refresh·즉시 철회 및 나머지 P0는 미완료입니다. Mock/Fake/Stub 또는 kind 성공만으로 서비스 전체를 완료 처리하지 않습니다.
 
 ## 빠른 검증
 
 ```bash
 make test
+# 아래 IdP 설정과 CASK_E2E_TOKEN을 준비한 후 실행
 make kind-test
 ```
 
@@ -32,7 +34,19 @@ make kind-test
 - kubectl
 - 선택: Helm, Helm 차트 설치 경로를 테스트할 때만 필요
 
-현재 구현에는 Web UI가 없으며 제공된 사용자 클라이언트는 `caskctl`입니다. 이는 UI 개발 금지가 아닙니다. `caskctl`은 Kubernetes API가 아니라 `cask-api`에만 접속합니다. 아래 dev-token·로컬 이미지·포트 포워딩은 개발 검증용이며 Production 배포 구성이 아닙니다.
+현재 구현에는 Web UI가 없으며 제공된 사용자 클라이언트는 `caskctl`입니다. 이는 UI 개발 금지가 아닙니다. `caskctl`은 Kubernetes API가 아니라 `cask-api`에만 접속합니다. 로컬 이미지·포트 포워딩은 개발 검증용이며 Production 배포 구성이 아닙니다. **dev-token/user:xxx는 더 이상 허용하지 않습니다.**
+
+모든 API 실행 모드에 검증된 JWT가 필요합니다. HTTPS 테스트 IdP에 API audience와 `cask:sessions` scope를 구성하고 다음 값을 공급하세요. 실제 토큰을 shell history/저장소/로그에 붙여 넣지 마세요. CLI 자체 login/refresh는 아직 제공되지 않습니다.
+
+```bash
+export CASK_OIDC_ISSUER=https://your-test-idp.example/issuer
+export CASK_OIDC_AUDIENCE=cask-api
+export CASK_OIDC_JWKS_URL=https://your-test-idp.example/issuer/keys
+# 승인된 외부 인증 절차로 CASK_TOKEN을 공급하고, E2E 실행 시에만:
+export CASK_E2E_TOKEN="$CASK_TOKEN"
+```
+
+예시 URL은 실제 IdP가 아닙니다. 실제 값/짧은 수명의 JWT로 교체해야 합니다. 키 회전·이전 세션 마이그레이션·검증 한계는 [Runbook](docs/RUNBOOK.md#8-jwt-인증-운영-p0-1a)을 참고하세요.
 
 ### 2. 로컬 바이너리 빌드
 
@@ -92,7 +106,10 @@ make kind-up
 make kind-load
 helm upgrade --install agentcask ./charts/agentcask \
   --namespace agentcask-system \
-  --create-namespace
+  --create-namespace \
+  --set-string api.oidc.issuer="$CASK_OIDC_ISSUER" \
+  --set-string api.oidc.audience="$CASK_OIDC_AUDIENCE" \
+  --set-string api.oidc.jwksURL="$CASK_OIDC_JWKS_URL"
 kubectl -n agentcask-system rollout status deploy/cask-api --timeout=180s
 kubectl -n agentcask-system rollout status deploy/cask-model-proxy --timeout=180s
 kubectl -n agentcask-system rollout status deploy/cask-controller --timeout=180s
@@ -110,7 +127,7 @@ kubectl -n agentcask-system port-forward svc/cask-api 18080:8080
 
 ```bash
 export CASK_API_SERVER=http://127.0.0.1:18080
-export CASK_TOKEN=dev-token
+# CASK_TOKEN은 앞서 승인된 외부 인증 절차로 공급한 JWT를 사용합니다.
 ```
 
 ### 5. 세션 생성, 조회, 터미널 접속, 삭제

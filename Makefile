@@ -1,8 +1,9 @@
 KIND_CLUSTER ?= agentcask-mvp
 SESSION_NAMESPACE ?= agentcask-sessions
 GOARCH ?= $(shell go env GOARCH)
+HELM_VALUES ?= charts/agentcask/ci/oidc-values.yaml
 
-.PHONY: build linux-build test runtime-test tidy helm-lint helm-template kind-up kind-build-images kind-load kind-deploy kind-test kind-down clean
+.PHONY: build linux-build test runtime-test tidy helm-lint helm-template kind-up kind-build-images kind-load kind-deploy kind-auth-check kind-test kind-down clean
 
 build:
 	go build -o bin/cask-api ./cmd/cask-api
@@ -20,10 +21,10 @@ tidy:
 	go mod tidy
 
 helm-lint:
-	helm lint charts/agentcask
+	helm lint charts/agentcask -f $(HELM_VALUES)
 
 helm-template:
-	helm template agentcask charts/agentcask --include-crds >/tmp/agentcask-helm.yaml
+	helm template agentcask charts/agentcask -f $(HELM_VALUES) --include-crds
 
 linux-build:
 	mkdir -p bin/linux
@@ -47,8 +48,10 @@ kind-load: kind-build-images
 	kind load docker-image --name "$(KIND_CLUSTER)" agentcask/agent-runtime:dev
 
 kind-deploy:
+	@test -n "$$CASK_OIDC_ISSUER" -a -n "$$CASK_OIDC_AUDIENCE" -a -n "$$CASK_OIDC_JWKS_URL" || { echo "Set CASK_OIDC_ISSUER, CASK_OIDC_AUDIENCE and CASK_OIDC_JWKS_URL (HTTPS test IdP required)" >&2; exit 1; }
 	kubectl apply -f config/crd
 	kubectl apply -f deploy/kind/namespace.yaml
+	kubectl -n agentcask-system create configmap cask-api-auth --from-literal=CASK_OIDC_ISSUER="$$CASK_OIDC_ISSUER" --from-literal=CASK_OIDC_AUDIENCE="$$CASK_OIDC_AUDIENCE" --from-literal=CASK_OIDC_JWKS_URL="$$CASK_OIDC_JWKS_URL" --dry-run=client -o yaml | kubectl apply -f -
 	kubectl apply -f deploy/kind/network-policy.yaml
 	kubectl apply -f config/rbac/rbac.yaml
 	kubectl apply -f deploy/kind/runtimeclass-kata.yaml
@@ -60,7 +63,10 @@ kind-deploy:
 	kubectl -n agentcask-system rollout status deploy/cask-model-proxy --timeout=180s
 	kubectl -n agentcask-system rollout status deploy/cask-controller --timeout=180s
 
-kind-test: kind-up kind-load kind-deploy
+kind-auth-check:
+	@test -n "$$CASK_OIDC_ISSUER" -a -n "$$CASK_OIDC_AUDIENCE" -a -n "$$CASK_OIDC_JWKS_URL" -a -n "$$CASK_E2E_TOKEN" || { echo "kind-test requires CASK_OIDC_ISSUER/AUDIENCE/JWKS_URL and CASK_E2E_TOKEN; no dev authentication fallback" >&2; exit 1; }
+
+kind-test: kind-auth-check kind-up kind-load kind-deploy
 	RUN_KIND_E2E=1 CASKCTL_BIN=$(CURDIR)/bin/caskctl go test ./test/e2e/... -count=1 -timeout=5m
 
 kind-down:

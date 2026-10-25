@@ -58,18 +58,15 @@ func (g *Gateway) Serve(w http.ResponseWriter, r *http.Request, userID, sessionI
 		http.Error(w, "session not found", http.StatusNotFound)
 		return
 	}
-	if session.Spec.UserID != userID {
+	if session == nil || userID == "" || session.Spec.UserID != userID {
 		http.Error(w, "forbidden", http.StatusForbidden)
 		return
 	}
-	if session.Status.Phase != agentv1.PhaseRunning || !session.Status.TerminalReady || session.Status.PodName == "" {
+	if session.DeletionTimestamp != nil || (session.Status.ExpiresAt != nil && !time.Now().Before(session.Status.ExpiresAt.Time)) || session.Status.Phase != agentv1.PhaseRunning || !session.Status.TerminalReady || session.Status.PodName == "" {
 		http.Error(w, "session not ready", http.StatusConflict)
 		return
 	}
 	upgrader := g.Upgrader
-	if upgrader.CheckOrigin == nil {
-		upgrader.CheckOrigin = func(*http.Request) bool { return true }
-	}
 	conn, err := upgrader.Upgrade(w, r, nil)
 	if err != nil {
 		return
@@ -88,7 +85,9 @@ func (g *Gateway) Serve(w http.ResponseWriter, r *http.Request, userID, sessionI
 		return
 	}
 	defer stream.Close()
-	go g.closeWhenSessionStops(ctx, cancel, conn, stream, sessionID)
+	stopClosing := context.AfterFunc(ctx, func() { _ = conn.Close(); _ = stream.Close() })
+	defer stopClosing()
+	go g.closeWhenSessionStops(ctx, cancel, conn, stream, sessionID, userID)
 
 	done := make(chan struct{})
 	var writeMu sync.Mutex
@@ -153,7 +152,7 @@ func DefaultCommand(tool string) []string {
 	return []string{"/bin/sh", "-lc", "if command -v tmux >/dev/null 2>&1; then tmux new-session -A -s agent '" + shellQuote(cmd) + "'; else " + cmd + "; fi"}
 }
 
-func (g *Gateway) closeWhenSessionStops(ctx context.Context, cancel context.CancelFunc, conn *websocket.Conn, stream ExecStream, sessionID string) {
+func (g *Gateway) closeWhenSessionStops(ctx context.Context, cancel context.CancelFunc, conn *websocket.Conn, stream ExecStream, sessionID, userID string) {
 	ticker := time.NewTicker(2 * time.Second)
 	defer ticker.Stop()
 	for {
@@ -162,7 +161,7 @@ func (g *Gateway) closeWhenSessionStops(ctx context.Context, cancel context.Canc
 			return
 		case <-ticker.C:
 			session, err := g.Resolver.Get(ctx, sessionID)
-			if err != nil || session == nil || session.DeletionTimestamp != nil || session.Status.Phase == agentv1.PhaseExpired || session.Status.Phase == agentv1.PhaseTerminating || session.Status.Phase == agentv1.PhaseFailed || !session.Status.TerminalReady {
+			if err != nil || session == nil || session.Spec.UserID != userID || session.DeletionTimestamp != nil || (session.Status.ExpiresAt != nil && !time.Now().Before(session.Status.ExpiresAt.Time)) || session.Status.Phase != agentv1.PhaseRunning || !session.Status.TerminalReady {
 				_ = stream.Close()
 				_ = conn.Close()
 				cancel()

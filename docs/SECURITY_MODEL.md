@@ -190,3 +190,9 @@ Also verify cross-user/session/tenant denial, expired/revoked credentials, least
 ## 10. Production security evolution
 
 Vault, SPIFFE, External Secrets, OIDC and other reviewed integrations are allowed, not excluded by historical scope. Specific technologies are optional; required security outcomes are not. Document token/key rotation, revocation, incident response and dependency-failure behavior. Only the internal `cask-model-proxy` credential boundary may hold upstream model credentials; new gateway capabilities must not distribute those keys to Agent Pods or public-facing components.
+
+## 11. 구현된 JWT 경계와 남은 제한
+
+API는 명시적인 HTTPS issuer/audience/JWKS 설정과 RS256/ES256 서명·exp·sub·nbf 검증을 요구하며 `cask:sessions` scope 및 issuer+sub 해시 owner로 세션을 제한한다. 임의 Bearer/개발 identity fallback은 없다. 자세한 계약·호환성은 ADR-007과 API_SPEC을 따른다.
+
+로컬 TLS JWKS fixture는 서명/키 회전/부정 테스트용이며 실제 IdP 검증이 아니다. JWT는 exp까지 유효하며 JWKS cache와 일반 OAuth JWT만으로 사용자 logout/키 제거를 즉시 철회하지 못한다. 운영자는 짧은 TTL과 비상 차단 절차를 적용해야 한다. CLI device flow/refresh, 분산 철회, 조직 정책, 지속적인 감사 수집/보존과 기존 model proxy 토큰 문제는 [실제 코드 기반 백로그](PRODUCTION_BACKLOG.md)에 남아 있다. P0 전체가 해결되기 전 Production 배포하지 않는다.

@@ -47,6 +47,11 @@ sessionToken:
 
 api:
   name: cask-api
+  # Required in every environment; there is no development auth fallback.
+  oidc:
+    issuer: ""
+    audience: ""
+    jwksURL: ""
   replicaCount: 1
   image:
     repository: agentcask/cask-api

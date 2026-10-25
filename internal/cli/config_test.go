@@ -23,3 +23,11 @@ func TestLoadConfigFileAndEnv(t *testing.T) {
 		t.Fatalf("env overrides not loaded: %+v", cfg)
 	}
 }
+
+func TestNoDevelopmentTokenDefault(t *testing.T) {
+	t.Setenv("CASK_TOKEN", "")
+	cfg := LoadConfig(filepath.Join(t.TempDir(), "missing.yaml"))
+	if cfg.Token != "" {
+		t.Fatal("CLI silently supplies a development credential")
+	}
+}

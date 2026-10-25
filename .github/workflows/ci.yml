@@ -50,6 +50,11 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+
       - name: Set up kubectl
         uses: azure/setup-kubectl@v4
 
@@ -58,8 +63,9 @@ jobs:
 
       - name: Validate Helm chart
         run: |
-          helm lint charts/agentcask
-          helm template agentcask charts/agentcask --include-crds >/tmp/agentcask-helm.yaml
+          make helm-lint
+          make helm-template >/tmp/agentcask-helm.yaml
+          go test ./test/helm -count=1
 
       - name: Validate kustomize render
         run: kubectl kustomize --load-restrictor=LoadRestrictionsNone deploy/kind >/tmp/agentcask-kind.yaml

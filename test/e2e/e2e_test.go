@@ -22,6 +22,9 @@ func TestKindCreateConnectDeleteFlow(t *testing.T) {
 	if os.Getenv("RUN_KIND_E2E") != "1" {
 		t.Skip("set RUN_KIND_E2E=1 to run kind E2E")
 	}
+	if os.Getenv("CASK_E2E_TOKEN") == "" {
+		t.Fatal("CASK_E2E_TOKEN must contain a signed JWT for the configured test issuer; dev-token is not accepted")
+	}
 	ctx, cancel := context.WithTimeout(context.Background(), 4*time.Minute)
 	defer cancel()
 	apiURL := startPortForward(t, ctx, "cask-api")
@@ -32,7 +35,7 @@ func TestKindCreateConnectDeleteFlow(t *testing.T) {
 	if caskctl == "" {
 		caskctl = "caskctl"
 	}
-	env := append(os.Environ(), "CASK_API_SERVER="+apiURL, "CASK_TOKEN=dev-token")
+	env := append(os.Environ(), "CASK_API_SERVER="+apiURL, "CASK_TOKEN="+os.Getenv("CASK_E2E_TOKEN"))
 	createOut := run(t, ctx, env, caskctl, "session", "create", "--tool", "stub", "--repo", "https://example.invalid/repo.git", "--branch", "main", "--model", "default", "--resource", "small", "--isolation", "default", "--ttl", "30m")
 	assertNoLeak(t, "create output", createOut)
 	sessionID := parseSessionID(t, createOut)
@@ -178,7 +181,7 @@ func waitSessionRunning(t *testing.T, ctx context.Context, apiURL, id string) {
 		default:
 		}
 		req, _ := http.NewRequestWithContext(ctx, http.MethodGet, apiURL+"/api/v1/sessions/"+id, nil)
-		req.Header.Set("Authorization", "Bearer dev-token")
+		req.Header.Set("Authorization", "Bearer "+os.Getenv("CASK_E2E_TOKEN"))
 		resp, err := http.DefaultClient.Do(req)
 		if err == nil && resp.StatusCode == http.StatusOK {
 			var body struct {
