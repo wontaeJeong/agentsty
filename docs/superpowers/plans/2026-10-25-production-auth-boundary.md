@@ -52,7 +52,7 @@ Files: `charts/agentcask/{values.yaml,templates/cask-api-deployment.yaml}`, `dep
 - [x] kind도 동일 검증기를 사용하도록 설정하고 E2E는 명시적으로 공급된 JWT를 사용한다. 토큰이 없으면 실제 E2E 실행은 실패하며 성공으로 집계하지 않는다.
 - [x] 레거시 세션 마이그레이션/토큰 갱신의 현재 한계/JWKS 회전·장애 대응을 문서화한다.
 - [x] `make test`, race, vet, build, Helm positive/negative, 가능한 cluster 검증을 실행하고 미실행 사유를 기록한다. 실제 IdP/kind는 설정 미제공으로 BLOCKED.
-- [ ] 독립 리뷰 후 커밋/푸시/PR 생성. main/워크트리 연결 재확인. 사용자 승인 전 머지하지 않는다.
+- [x] 독립 리뷰 및 재현 테스트 기반 수정 후 커밋/푸시/[PR #4](https://github.com/wontaeJeong/agentsty/pull/4) 생성. 기본 checkout의 main 유지 확인. 사용자 승인 전 머지하지 않는다.
 
 ## 추가 단위: 발견된 의존성 취약점 제거
 

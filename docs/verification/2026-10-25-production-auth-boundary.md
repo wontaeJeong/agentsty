@@ -13,6 +13,9 @@
 | `9d8e795` | 실제 코드 근거의 P0/P1/P2 백로그 및 첫 구현 계획 |
 | `b29dba7` | `internal/auth` JWT/JWKS 검증, `internal/api` 인증/소유권/감사, `cmd/cask-api` 필수 설정, terminal Origin/만료 종료, CLI 개발 토큰 기본값 제거, Helm/kind/E2E 계약 및 ADR/운영 문서 |
 | `bb5a1a5` | Go1.26.10 및 x/net/x/text/spdystream 보안 수정과 종속 업데이트, CI race/vet/취약점 gate |
+| `047184d` | 독립 리뷰 대응: 생성 정책 우회 수정, live terminal/strict nbf/병렬 make 회귀 테스트 및 실제 JWT type 신뢰 계약 명확화 |
+
+구현 PR: [#4](https://github.com/wontaeJeong/agentsty/pull/4). 커밋은 원격 작업 브랜치에 push했으며 main 병합/자동 머지/배포는 수행하지 않았다. 원격 CI 완료 여부는 별도 확인이 필요하다.
 
 ## 해결한 결함과 회귀 근거
 
