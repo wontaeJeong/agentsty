@@ -22,9 +22,19 @@ permissions:
 jobs:
   kind-test:
     runs-on: ubuntu-latest
+    # Required test IdP metadata and short-lived API-scoped JWT. Missing values
+    # deliberately fail preflight; never substitute dev tokens or skip the gate.
+    env:
+      CASK_OIDC_ISSUER: ${{ vars.CASK_OIDC_ISSUER }}
+      CASK_OIDC_AUDIENCE: ${{ vars.CASK_OIDC_AUDIENCE }}
+      CASK_OIDC_JWKS_URL: ${{ vars.CASK_OIDC_JWKS_URL }}
+      CASK_E2E_TOKEN: ${{ secrets.CASK_E2E_TOKEN }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+
+      - name: Validate required test identity configuration
+        run: make kind-auth-check
 
       - name: Set up Go
         uses: actions/setup-go@v5

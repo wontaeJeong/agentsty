@@ -67,6 +67,7 @@
 - 기존 공개 개발 HMAC 기본값, 부족한 model-token 범위/철회, Git checkout 부재, 모델 gateway fake 성공/스트리밍/사용량 정책, 강한 runtime/CNI 격리, controller/terminal/운영/배포 품질 결함은 [백로그](../PRODUCTION_BACKLOG.md)에 남아 있다.
 - 감사 로그는 JSON stderr 출력까지만 구현했다. 수집·보존·권한·경보·보안 이벤트 연계는 배포별 검증이 필요하다. JWKS unknown-key abuse/rate-limit, terminal backpressure/heartbeat/UID는 후속 보안·운영 단위다.
 - CI workflow는 수정했으나 원격 Actions 결과/이미지 scan/SBOM/signing/provenance/release promotion은 이 로컬 실행으로 검증되지 않았다.
+- 원격 kind E2E에는 repository의 테스트 IdP variables와 짧은 수명의 `CASK_E2E_TOKEN` secret 공급이 필요하다. 워크플로에 전달 경로와 명시적 preflight를 추가했다. 값이 없거나 fork에서 secret 접근이 차단되면 CI도 실패한다. 장기 토큰/skip으로 가리는 대신 승인된 CI token 발급·교체 자동화가 후속으로 필요하다.
 
 main 직접 변경/운영 배포/자동 머지를 수행하지 않는다. 이 기록은 부분 개선의 증거이며 Production 출시 승인이 아니다.
 

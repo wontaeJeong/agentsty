@@ -170,3 +170,5 @@ These procedures and guarantees are not implemented by this runbook update. Reco
 격리된 테스트 cluster에서 위 IdP 설정 및 해당 IdP가 발급한 짧은 JWT `CASK_E2E_TOKEN`을 공급한 뒤 `make kind-test`를 실행한다. 다른 사용 중인 cluster를 가리키지 않도록 별도 KUBECONFIG/context를 확인한다. 값이 없으면 preflight가 실패하며 E2E 성공으로 집계하지 않는다. 기존 E2E는 stub 터미널/가짜 repo/최소 proxy 경로 검증이므로 실제 checkout/agent/provider/격리는 별도의 P0-3/4/5/6 증거가 필요하다.
 
 로컬 `go test ./internal/auth ./internal/api`는 TLS JWKS fixture의 정상/변조/만료/issuer/audience/sub/nbf/scope/rotation/concurrency/outage와 owner 경계를 확인한다. fixture는 실제 IdP가 아니며 CLI login/refresh 및 IdP 설정의 적합성을 증명하지 못한다.
+
+GitHub Actions `kind E2E`도 repository variables `CASK_OIDC_ISSUER`, `CASK_OIDC_AUDIENCE`, `CASK_OIDC_JWKS_URL` 및 secret `CASK_E2E_TOKEN`을 명시적으로 전달한다. 구성하지 않은 저장소/secret 접근이 없는 fork PR에서는 사전 검사가 **실패**하며 green 또는 skip으로 대체하지 않는다. 토큰은 짧은 TTL의 승인된 테스트 identity로 실행 시 공급·교체해야 한다. 장기 고정 토큰은 금지하며 CI용 자동 token exchange는 아직 구현되지 않아 운영 의존성/백로그다. IdP/JWT 없이 이 워크플로가 통과한다고 가정하지 않는다.
