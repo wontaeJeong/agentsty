@@ -28,7 +28,7 @@ make kind-test
 
 ### 1. 준비물
 
-- Go 1.25+
+- Go 1.26.10+ (`go.mod`의 보안 패치 최소 버전)
 - Docker
 - kind
 - kubectl

@@ -3,7 +3,7 @@ SESSION_NAMESPACE ?= agentcask-sessions
 GOARCH ?= $(shell go env GOARCH)
 HELM_VALUES ?= charts/agentcask/ci/oidc-values.yaml
 
-.PHONY: build linux-build test runtime-test tidy helm-lint helm-template kind-up kind-build-images kind-load kind-deploy kind-auth-check kind-test kind-down clean
+.PHONY: build linux-build test security-test runtime-test tidy helm-lint helm-template kind-up kind-build-images kind-load kind-deploy kind-auth-check kind-test kind-down clean
 
 build:
 	go build -o bin/cask-api ./cmd/cask-api
@@ -13,6 +13,9 @@ build:
 
 test:
 	go test ./...
+
+security-test:
+	go run golang.org/x/vuln/cmd/govulncheck@v1.9.0 ./...
 
 runtime-test:
 	RUN_RUNTIME_TEST=1 go test ./test/e2e/... -run TestRuntimeSupportsRepositoryWorkAndPersistentTerminal -count=1

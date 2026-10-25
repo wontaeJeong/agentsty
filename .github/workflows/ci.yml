@@ -35,6 +35,14 @@ jobs:
       - name: Run tests
         run: make test
 
+      - name: Race detector and static analysis
+        run: |
+          go test -race ./...
+          go vet ./...
+
+      - name: Check reachable Go vulnerabilities
+        run: make security-test
+
       - name: Build binaries
         run: make build
 

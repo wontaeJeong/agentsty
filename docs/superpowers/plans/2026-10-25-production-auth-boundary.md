@@ -53,3 +53,10 @@ Files: `charts/agentcask/{values.yaml,templates/cask-api-deployment.yaml}`, `dep
 - [ ] 레거시 세션 마이그레이션/토큰 갱신의 현재 한계/JWKS 회전·장애 대응을 문서화한다.
 - [ ] `make test`, race, vet, build, Helm positive/negative, 가능한 cluster 검증을 실행하고 미실행 사유를 기록한다.
 - [ ] 독립 리뷰 후 커밋/푸시/PR 생성. main/워크트리 연결 재확인. 사용자 승인 전 머지하지 않는다.
+
+## 추가 단위: 발견된 의존성 취약점 제거
+
+- [x] `govulncheck` 최초 실행: Go1.26.3 및 기존 x/net/x/text/spdystream에서 도달 가능한 22건 확인(RED).
+- [x] Go 최소 버전을 1.26.10, x/net 0.60.0, x/text 0.42.0, spdystream 0.5.1로 갱신하고 종속 x/sys/x/term을 함께 갱신한다.
+- [x] `make test`, race, vet, native/Linux-amd64 build 및 `govulncheck@v1.9.0` 재실행: No vulnerabilities found(GREEN).
+- [ ] race/vet/고정 버전 govulncheck를 CI gate로 유지하고 독립 커밋한다.

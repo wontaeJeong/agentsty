@@ -25,7 +25,7 @@ P0 병렬 가능 경계: 인증/CLI, 토큰/Secret, workspace, gateway, runtime 
 | P1-4 | userId owner 단위만 존재; org/project/quota/budget 없음 | 영속 identity/policy 모델, tenant 간 권한/자원 고갈/공정성 검증 |
 | P1-5 | 구조화된 감사 이외 metrics/tracing/SLO 운영 증거 없음 | request/session correlation, OTel/Prometheus, dashboard/alert/runbook 실제 장애 진단 및 복구 실측 |
 | P1-6 | Helm은 dev 이미지/resources 빈 값/replica 1, API의 issuer 설정도 없음 | dev/staging/prod 분리/필수 설정/Secret/PDB/topology/probes/digest, 설치/upgrade/rollback/HA. API group 변경은 GA 전 ADR/변환/마이그레이션을 통해서만 |
-| P1-7 | `.github/workflows` baseline 빌드·테스트의 실제 범위를 별도 audit | lint/race/vuln/container/Helm scan + SBOM/signing/provenance/release promotion + upgrade/rollback gate |
+| P1-7 | `.github/workflows/ci.yml`에 formatting/tidy/test/build/runtime/render가 있었다. 이번에 race/vet/Go vulnerability gate 추가. 현재 환경 초기 scan에서 기존 Go1.26.3/x/net/x/text/spdystream 관련 도달 가능 22건을 발견하여 Go1.26.10/x/net0.60/x/text0.42/spdystream0.5.1 및 요구된 x/sys/x/term 버전으로 갱신. 재검사에서 No vulnerabilities found | 컨테이너·Kubernetes scan/SBOM/signing/provenance/release promotion/upgrade·rollback gate는 잔여. Go scan은 컨테이너/실행 격리를 증명하지 않음 |
 
 ## P2: 제품 기능
 
