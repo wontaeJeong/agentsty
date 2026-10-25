@@ -1,6 +1,6 @@
-# Terminal Gateway: MVP Design
+# Terminal Gateway: Current Design and Evolution
 
-The terminal gateway is implemented inside `cask-api` for MVP.
+The terminal gateway is currently implemented inside `cask-api`. A separate gateway service is permitted with an ADR addressing authentication/authorization propagation, routing, failure/reconnect behavior, observability and API/protocol compatibility. This document does not impose permanent co-location or certify production readiness.
 
 ## 1. Endpoint
 
@@ -23,7 +23,7 @@ client connects
 
 ## 3. Kubernetes exec command
 
-Recommended MVP command for real user sessions:
+Current baseline command for real user sessions:
 
 ```bash
 tmux new-session -A -s agent '<agent command>'
@@ -109,7 +109,7 @@ These values are resolved internally from AgentSession and server-side config.
 
 ## 7. Disconnect behavior
 
-MVP behavior:
+Baseline behavior/design:
 
 - WebSocket disconnect closes the active exec stream.
 - tmux session may remain alive inside Pod.
@@ -117,14 +117,14 @@ MVP behavior:
 
 ## 8. Audit/logging
 
-For MVP:
+Required logging policy:
 
 - log connection open/close metadata
 - log sessionId/userId/phase
 - do not log raw terminal input/output by default
 - never log tokens or API keys
 
-Terminal I/O capture can be added later with explicit policy controls.
+Terminal I/O capture is permitted only with explicit authorization, retention, privacy and secret-handling controls; raw capture is disabled by default. Production acceptance additionally requires real reconnect/disconnect, session deletion/expiry, backpressure/resource limits and dependency-failure validation; tmux persistence inside a live Pod is not cross-Pod session recovery. See [Release Criteria](RELEASE_CRITERIA.md).
 
 ## 9. Failure cases
 

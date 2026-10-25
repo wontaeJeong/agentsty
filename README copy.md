@@ -1,42 +1,15 @@
-# agentcask MVP Documentation Pack
+# agentcask Documentation Pack — 과거 진입 문서
 
-This pack describes the MVP implementation target for **agentcask**.
+이 파일은 초기 MVP 문서 팩의 진입점이었다. 당시의 Web UI, 조직·billing, 보안 통합, 고급 gateway, 감사 파이프라인 등 제외 목록은 더 이상 개발 제한으로 유효하지 않다. 중복된 제품 규칙을 유지하지 않고 아래 공식 문서로 연결한다.
 
-The MVP provides a Kubernetes-native agent session platform with:
+- 현재 구성·사용법: [README](README.md)
+- 개발 규칙: [AGENTS](AGENTS.md), [CLAUDE](CLAUDE.md)
+- 제품 목적·흐름: [PRD](PRD.md)
+- 목표 요구사항: [Production Requirements](docs/PRODUCTION_REQUIREMENTS.md)
+- 후속 작업: [Production Roadmap](docs/PRODUCTION_ROADMAP.md)
+- 완료 증거: [Release Criteria](docs/RELEASE_CRITERIA.md)
+- 결정 이력과 ADR: [Design Decisions](docs/DESIGN_DECISIONS.md)
+- 보안 경계: [Security Model](docs/SECURITY_MODEL.md)
+- 테스트 목적과 한계: [Test Plan](docs/TEST_PLAN.md)
 
-- `cask-api`: REST API + WebSocket terminal gateway
-- `cask-model-proxy`: internal minimal model proxy
-- `cask-controller`: Kubernetes custom controller
-- `AgentSession` CRD under `agentcask.aidev.samsungds.net`
-- per-session Agent Pods
-- optional runtime isolation through `isolationProfiles`
-- `caskctl`: CLI client for creating, listing, connecting to, and deleting sessions
-- kind-based local integration testing
-- GitHub Actions CI/CD for tests, builds, kind E2E, and image publishing
-- strict model/API key non-exposure rules
-
-## Read order for implementation agents
-
-1. `AGENTS.md`
-2. `PRD.md`
-3. `docs/ARCHITECTURE.md`
-4. `docs/API_SPEC.md`
-5. `docs/CRD_SPEC.md`
-6. `docs/SECURITY_MODEL.md`
-7. `docs/IMPLEMENTATION_PLAN.md`
-8. `docs/TEST_PLAN.md`
-9. `docs/CI_CD.md`
-
-## MVP scope
-
-The MVP intentionally excludes:
-
-- Web portal UI
-- multi-cluster scheduling
-- billing/chargeback
-- Vault/SPIFFE/ExternalSecrets integration
-- full model gateway productization
-- production-grade audit log pipeline
-- real Kata validation inside kind
-
-The MVP must still include a secure path for model access: real model/API keys must never be placed in user-facing CRDs, API responses, Agent Pods, terminal output, CLI output, or session logs. Upstream credentials are held only by the internal `cask-model-proxy` component.
+초기 팩의 Go 서비스/AgentSession/CLI/kind 자산은 유지한다. 과거 제외 규칙의 해제가 현재 기능의 Production 준비 완료를 뜻하지 않는다. upstream 키의 Agent Pod·CRD·사용자 출력·로그 노출 금지와 내부 model proxy 자격 증명 경계는 변하지 않는다.

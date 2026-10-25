@@ -1,4 +1,6 @@
-# API Spec: cask-api MVP
+# API Spec: cask-api
+
+This is the existing baseline API contract/design. Production targets do not silently add endpoints or certify implementation: use [Release Criteria](RELEASE_CRITERIA.md) and an [ADR](DESIGN_DECISIONS.md) for compatible evolution, including gateway extraction and new clients.
 
 ## 1. Base path
 
@@ -8,7 +10,7 @@
 
 ## 2. Authentication
 
-MVP may start with a simple bearer token or mock user identity for local testing.
+Simple development bearer tokens or mock identities are local/test mechanisms only, not production authentication evidence. Production requires verified user identity, user/session authorization, expiry/revocation behavior and tenant boundaries where applicable. OIDC and central identity integration are permitted; their introduction requires explicit contract and threat-model review.
 
 All handlers must be designed to receive a resolved user identity:
 

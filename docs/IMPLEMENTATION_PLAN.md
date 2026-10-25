@@ -1,4 +1,8 @@
-# Implementation Plan: agentcask MVP
+# Initial Implementation Plan: agentcask Baseline
+
+## Status and scope
+
+The phases below preserve the initial implementation sequence and regression intent. They are not permanent scope restrictions, a complete inventory of delivered behavior, or the production Definition of Done. Stub/fake success satisfies only the stated test purpose. Production follow-up is managed in [Production Roadmap](PRODUCTION_ROADMAP.md), with targets in [Production Requirements](PRODUCTION_REQUIREMENTS.md) and completion evidence in [Release Criteria](RELEASE_CRITERIA.md). Do not rebuild existing phases merely because this historical plan uses imperative language.
 
 ## Phase 0. Repository skeleton
 
@@ -120,7 +124,7 @@ Acceptance criteria:
 - fake WebSocket terminal test passes.
 - kind E2E can connect through the deterministic `stub` tool and the runtime image contains `opencode` for user sessions.
 
-## Phase 6. cask-model-proxy minimal model proxy
+## Phase 6. cask-model-proxy initial model proxy
 
 Implement:
 

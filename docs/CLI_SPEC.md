@@ -1,4 +1,6 @@
-# CLI Spec: caskctl MVP
+# CLI Spec: caskctl
+
+This document covers the current CLI contract/design, not a permanent CLI-only or CLI-first product scope. Additional clients and agent runtimes are permitted under [Production Requirements](PRODUCTION_REQUIREMENTS.md). Contract changes require compatibility and release evidence.
 
 ## 1. Binary name
 
@@ -8,7 +10,7 @@ caskctl
 
 ## 2. Configuration
 
-Recommended MVP config file:
+Current config file:
 
 ```text
 ~/.caskctl/config.yaml
@@ -20,6 +22,8 @@ Example:
 apiServer: https://agentcask.example.com
 token: dev-token
 ```
+
+`dev-token` is a local development example only, not a production credential or identity scheme. Production authentication must meet [Release Criteria](RELEASE_CRITERIA.md).
 
 Environment overrides:
 
@@ -43,7 +47,7 @@ caskctl session create \
   --ttl 2h
 ```
 
-`--tool` defaults to `opencode` for MVP sessions. Use `--tool stub` only for deterministic tests.
+`--tool` currently defaults to `opencode`; this does not fix future runtime priorities. Use `--tool stub` only for deterministic tests, not real agent/provider acceptance.
 
 Output:
 

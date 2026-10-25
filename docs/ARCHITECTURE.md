@@ -1,4 +1,6 @@
-# Architecture: agentcask MVP
+# Architecture: agentcask
+
+This document describes the current baseline topology and design, not a permanent product limit or a production readiness claim. Targets are in [Production Requirements](PRODUCTION_REQUIREMENTS.md); changes use [ADRs](DESIGN_DECISIONS.md) and [Release Criteria](RELEASE_CRITERIA.md).
 
 ## 1. High-level structure
 
@@ -14,10 +16,10 @@ User terminal
   -> cask-controller
   -> Agent Pod
   -> cask-model-proxy
-       - minimal model proxy
+       - internal model proxy
 ```
 
-Only `cask-api` is externally exposed.
+Currently only `cask-api` is externally exposed. Approved UI/gateway services may be added; Agent Pods and `cask-model-proxy` remain private and end users do not directly access Kubernetes or Pods.
 
 ## 2. Component responsibilities
 
@@ -151,13 +153,17 @@ NetworkPolicy
 
 No per-session Ingress is created by default.
 
-## 7. MVP deployment boundary
+## 7. Current deployment boundary and permitted evolution
 
-For MVP, `cask-api` contains two logical modules:
+Currently, `cask-api` contains two logical modules:
 
 ```text
 REST API
 Terminal Gateway
 ```
 
-The minimal Model Proxy is split into `cask-model-proxy` so upstream credentials are isolated in an internal-only component while `cask-api` remains the only externally exposed runtime service.
+The Model Proxy is split into `cask-model-proxy` to isolate upstream credentials in an internal-only component. This security boundary remains mandatory; keeping the proxy feature set minimal does not.
+
+The following are permitted target choices, not implemented changes: separate Terminal Gateway, provider/model gateways, persistent stores, OIDC/central authentication, Web UI/admin portals, event-driven reconciliation, dynamic resource/isolation policies, persistent/recoverable sessions, multiple Agent Runtimes and organizations/multitenancy. HA and horizontal scaling must follow target availability and capacity needs.
+
+Retain Go core services and AgentSession as assets. Any structural change needs an ADR covering technical need, threat model, identity/authorization propagation, data boundaries, operational cost, failure/recovery, API/CRD compatibility, migration and rollback. The initial topology cannot be used to reject a justified production feature. See [Production Roadmap](PRODUCTION_ROADMAP.md) for follow-up work and missing evidence.

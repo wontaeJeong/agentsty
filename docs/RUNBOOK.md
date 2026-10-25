@@ -1,4 +1,6 @@
-# Runbook: agentcask MVP
+# Runbook: agentcask Baseline
+
+These are existing operator diagnostics for the current topology, not a complete production operations guide. Kubernetes commands are for authorized operators with least-privilege access, not end-user product access. Never copy secrets or unredacted terminal/model bodies into diagnostic output or incident reports.
 
 ## 1. Check system pods
 
@@ -131,3 +133,9 @@ kubectl -n agentcask-sessions patch agentsession <name> \
 ```
 
 Use finalizer removal only for dev/test recovery.
+
+## 7. Production operations gaps and release prerequisites
+
+Before production use, supply and exercise deployment-specific procedures for identity/permission incidents, key/token rotation and revocation, dependency outages, node/component failure, cleanup failures, storage retention and backup/restore where state is persistent, upgrade/migration/rollback, alert response and capacity/performance management. Define recovery-time/data-loss objectives and demonstrate recovery against them.
+
+These procedures and guarantees are not implemented by this runbook update. Record operator ownership, safe diagnostics, monitoring signals, exact supported configuration and drill evidence in the release record. Do not remove finalizers in production without a reviewed recovery procedure that checks resource/data cleanup and ownership. See [Release Criteria](RELEASE_CRITERIA.md) and [Production Roadmap](PRODUCTION_ROADMAP.md).
