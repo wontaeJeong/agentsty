@@ -17,7 +17,7 @@ import (
 func main() {
 	namespace := flag.String("namespace", envDefault("SESSION_NAMESPACE", kube.DefaultSessionNamespace), "AgentSession namespace")
 	kubeconfig := flag.String("kubeconfig", os.Getenv("KUBECONFIG"), "kubeconfig path")
-	runtimeImage := flag.String("runtime-image", envDefault("AGENT_RUNTIME_IMAGE", "agentcask/agent-runtime:dev"), "Agent runtime image")
+	runtimeImage := flag.String("runtime-image", envDefault("AGENT_RUNTIME_IMAGE", controller.DefaultRuntimeImage), "Agent runtime image")
 	modelProxyURL := flag.String("model-proxy-url", envDefault("CASK_MODEL_PROXY_URL", "http://cask-model-proxy.agentcask-system.svc.cluster.local:8080/internal/model-proxy/v1"), "internal model proxy URL")
 	tokenSecret := flag.String("token-secret", envDefault("CASK_TOKEN_SECRET", "dev-session-proxy-secret"), "session proxy token HMAC secret")
 	flag.Parse()

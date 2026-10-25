@@ -4,7 +4,7 @@
 
 kind tests validate the MVP control plane and terminal path locally.
 
-The E2E flow uses the deterministic `stub` tool for terminal assertions, but it also checks that the Agent runtime image contains the primary MVP CLI, `opencode`.
+The E2E flow uses the deterministic `stub` tool for terminal assertions, but it also checks that the Agent Pod uses the derived runtime image and contains `opencode`, Git, SSH, and tmux. The runtime extends `ghcr.io/anomalyco/opencode:1.14.48`; the upstream image alone lacks the repository and persistent-terminal tools. E2E port forwards automatically allocate free local ports rather than claiming the manual testing ports 18080/18081.
 
 They do not validate real Kata VM isolation unless the host/kind node is configured with an actual Kata runtime.
 
@@ -170,6 +170,7 @@ The E2E test must verify:
 - session creation through `caskctl` or API.
 - Agent Pod created.
 - terminal connect returns expected output.
-- `opencode` is present in the Agent runtime image.
+- Agent Pod uses `agentcask/agent-runtime:dev`, derived from `ghcr.io/anomalyco/opencode:1.14.48`.
+- `opencode`, Git, SSH, and tmux are present in the Agent runtime image.
 - session delete removes Pod.
 - no secret sentinel leaked.

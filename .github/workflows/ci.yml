@@ -41,6 +41,9 @@ jobs:
       - name: Build container images
         run: make kind-build-images
 
+      - name: Verify runtime tools and persistent terminal
+        run: make runtime-test
+
   manifests:
     runs-on: ubuntu-latest
     steps:

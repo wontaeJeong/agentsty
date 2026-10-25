@@ -11,7 +11,7 @@ This chart installs the agentcask MVP control plane:
 
 ## Local kind install
 
-Build and load local images first:
+Build and load the local control-plane and derived runtime images first. The runtime extends the pinned public OpenCode image with Git, SSH, tmux, and the test adapter:
 
 ```bash
 make kind-load

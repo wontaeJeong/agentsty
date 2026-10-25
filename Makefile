@@ -2,7 +2,7 @@ KIND_CLUSTER ?= agentcask-mvp
 SESSION_NAMESPACE ?= agentcask-sessions
 GOARCH ?= $(shell go env GOARCH)
 
-.PHONY: build linux-build test tidy helm-lint helm-template kind-up kind-build-images kind-load kind-deploy kind-test kind-down clean
+.PHONY: build linux-build test runtime-test tidy helm-lint helm-template kind-up kind-build-images kind-load kind-deploy kind-test kind-down clean
 
 build:
 	go build -o bin/cask-api ./cmd/cask-api
@@ -12,6 +12,9 @@ build:
 
 test:
 	go test ./...
+
+runtime-test:
+	RUN_RUNTIME_TEST=1 go test ./test/e2e/... -run TestRuntimeSupportsRepositoryWorkAndPersistentTerminal -count=1
 
 tidy:
 	go mod tidy

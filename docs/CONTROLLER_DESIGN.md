@@ -42,7 +42,7 @@ spec:
   serviceAccountName: agent-session
   containers:
     - name: agent
-      image: agent-runtime:<fixed-version>
+      image: agentcask/agent-runtime:<fixed-version> # derived from pinned public OpenCode
       command: ["sleep", "infinity"]
       stdin: true
       tty: true

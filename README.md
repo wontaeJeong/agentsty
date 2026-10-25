@@ -2,7 +2,7 @@
 
 `agentcask`는 격리된 대화형 Agent 세션을 Kubernetes 위에서 실행하기 위한 CLI-first 플랫폼입니다. MVP는 `cask-api`, 내부 전용 `cask-model-proxy`, `cask-controller`, `caskctl`, `AgentSession` CRD, WebSocket 터미널 게이트웨이로 구성됩니다.
 
-`opencode`가 기본 MVP Agent 도구입니다. `caskctl session create`는 기본적으로 `--tool opencode`를 사용하며, Agent 런타임 이미지는 고정 버전의 `opencode-ai` CLI를 포함합니다. 터미널 경로를 결정적으로 테스트할 때는 `stub` 도구를 사용할 수 있습니다.
+`opencode`가 기본 MVP Agent 도구입니다. `caskctl session create`는 기본적으로 `--tool opencode`를 사용하며, Agent Pod는 공개 이미지 `ghcr.io/anomalyco/opencode:1.14.48`에 Git·SSH·tmux와 테스트 어댑터를 추가한 `agentcask/agent-runtime:dev`를 기본으로 사용합니다. 터미널 경로를 결정적으로 테스트할 때는 `stub` 도구를 사용할 수 있습니다.
 
 ## 빠른 검증
 
@@ -11,7 +11,7 @@ make test
 make kind-test
 ```
 
-`make kind-test`는 `agentcask-mvp` kind 클러스터를 생성/사용하고, `cask-api`, `cask-model-proxy`, `cask-controller`, Agent 런타임 로컬 이미지를 빌드 및 로드한 뒤 CRD/RBAC/Deployment를 설치합니다. 이후 `caskctl`로 세션 생성, 터미널 연결, 삭제 흐름을 실행하고, `REAL_UPSTREAM_KEY_SHOULD_NEVER_LEAK` 센티널 키가 AgentSession YAML, Agent Pod env, API/CLI 출력, 터미널 출력, 컴포넌트 로그에 노출되지 않는지 확인합니다.
+`make kind-test`는 `agentcask-mvp` kind 클러스터를 생성/사용하고, `cask-api`, `cask-model-proxy`, `cask-controller`, 파생 Agent 런타임 로컬 이미지를 빌드 및 로드한 뒤 CRD/RBAC/Deployment를 설치합니다. 이후 `caskctl`로 세션 생성, 터미널 연결, 삭제 흐름을 실행하고, 분리된 모델 프록시를 검증하며, `REAL_UPSTREAM_KEY_SHOULD_NEVER_LEAK` 센티널 키가 AgentSession YAML, Agent Pod env, API/CLI 출력, 터미널 출력, 컴포넌트 로그에 노출되지 않는지 확인합니다. E2E 포트 포워딩은 빈 로컬 포트를 자동 선택하므로 기존 SSH 터널과 충돌하지 않습니다.
 
 ## 사용자가 직접 테스트하는 방법
 
