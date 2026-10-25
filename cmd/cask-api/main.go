@@ -11,6 +11,7 @@ import (
 	"time"
 
 	caskapi "agentcask/internal/api"
+	"agentcask/internal/auth"
 	"agentcask/internal/kube"
 	"agentcask/internal/terminal"
 )
@@ -21,6 +22,12 @@ func main() {
 	kubeconfig := flag.String("kubeconfig", os.Getenv("KUBECONFIG"), "kubeconfig path")
 	memory := flag.Bool("memory", os.Getenv("CASK_MEMORY") == "1", "use in-memory store and echo terminal")
 	flag.Parse()
+	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
+	defer stop()
+	authenticator, err := newAuthenticatorFromEnv(ctx)
+	if err != nil {
+		fatal(err)
+	}
 
 	var store caskapi.Store
 	var termBackend terminal.ExecBackend
@@ -42,14 +49,13 @@ func main() {
 	server := &http.Server{
 		Addr: *addr,
 		Handler: (&caskapi.Server{
-			Store:     store,
-			Namespace: *namespace,
-			Terminal:  &terminal.Gateway{Resolver: store, Backend: termBackend},
+			Authenticator: authenticator,
+			Store:         store,
+			Namespace:     *namespace,
+			Terminal:      &terminal.Gateway{Resolver: store, Backend: termBackend},
 		}).Handler(),
 		ReadHeaderTimeout: 10 * time.Second,
 	}
-	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
-	defer stop()
 	go func() {
 		<-ctx.Done()
 		shutdownCtx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
@@ -60,6 +66,14 @@ func main() {
 	if err := server.ListenAndServe(); err != nil && err != http.ErrServerClosed {
 		fatal(err)
 	}
+}
+
+func newAuthenticatorFromEnv(ctx context.Context) (*auth.OIDC, error) {
+	return auth.NewOIDC(ctx, auth.Config{
+		Issuer:   os.Getenv("CASK_OIDC_ISSUER"),
+		Audience: os.Getenv("CASK_OIDC_AUDIENCE"),
+		JWKSURL:  os.Getenv("CASK_OIDC_JWKS_URL"),
+	})
 }
 
 func envDefault(key, fallback string) string {

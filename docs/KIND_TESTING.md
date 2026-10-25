@@ -18,7 +18,7 @@ make kind-test
 make kind-down
 ```
 
-A single command should run everything:
+A single command runs the baseline after operator-provided authentication configuration. First set `CASK_OIDC_ISSUER`, `CASK_OIDC_AUDIENCE`, `CASK_OIDC_JWKS_URL` for a reachable HTTPS test IdP and `CASK_E2E_TOKEN` to a signed access token with the API audience and `cask:sessions` scope. Missing values fail preflight (no dev fallback). See the [JWT runbook](RUNBOOK.md#8-jwt-인증-운영-p0-1a). Confirm the target KUBECONFIG/context before running; do not reuse another session's active cluster.
 
 ```bash
 make kind-test
@@ -47,7 +47,10 @@ make kind-up
 make kind-load
 helm upgrade --install agentcask ./charts/agentcask \
   --namespace agentcask-system \
-  --create-namespace
+  --create-namespace \
+  --set-string api.oidc.issuer="$CASK_OIDC_ISSUER" \
+  --set-string api.oidc.audience="$CASK_OIDC_AUDIENCE" \
+  --set-string api.oidc.jwksURL="$CASK_OIDC_JWKS_URL"
 kubectl -n agentcask-system rollout status deploy/cask-api --timeout=180s
 kubectl -n agentcask-system rollout status deploy/cask-model-proxy --timeout=180s
 kubectl -n agentcask-system rollout status deploy/cask-controller --timeout=180s
@@ -67,7 +70,7 @@ In another terminal:
 
 ```bash
 export CASK_API_SERVER=http://127.0.0.1:18080
-export CASK_TOKEN=dev-token
+# Supply CASK_TOKEN through an approved external JWT issuance process.
 ```
 
 ### 3.3 Create, connect, and delete a session
@@ -106,7 +109,7 @@ Then clean up:
 ./bin/caskctl session delete <session-id>
 ```
 
-For user-like baseline testing, omit `--tool` or set `--tool opencode`; `opencode` is the current default, not a permanent runtime priority. For terminal gateway assertions, prefer `--tool stub` because it does not depend on model/provider behavior. `dev-token` and port-forwarding examples are local development mechanisms, not production authentication/deployment.
+For user-like baseline testing, omit `--tool` or set `--tool opencode`; `opencode` is the current default, not a permanent runtime priority. For terminal gateway assertions, prefer `--tool stub` because it does not depend on model/provider behavior. `dev-token`/`user:xxx` are rejected in all environments. Port-forwarding is a local operator-controlled test path, not production deployment. Binary presence does not prove checkout/model/file-edit behavior.
 
 ## 4. Test cluster setup
 

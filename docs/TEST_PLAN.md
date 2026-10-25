@@ -104,14 +104,17 @@ Cases:
 Minimum checks:
 
 ```text
-helm lint charts/agentcask
-helm template agentcask charts/agentcask
+make helm-lint
+make helm-template
+go test ./test/helm -count=1
 helm install against kind with local dev images
 verify cask-api, cask-model-proxy, and cask-controller roll out
 run caskctl create/connect/delete through the Helm-installed cask-api
 ```
 
 ## 9. kind E2E tests
+
+Set the HTTPS test issuer/audience/JWKS configuration and a signed `CASK_E2E_TOKEN` before `make kind-test`. An unconfigured test fails preflight; arbitrary dev tokens are no longer accepted. Helm render-only values are not a functional IdP. Unit auth tests use a local TLS JWKS fixture, not a real IdP.
 
 Minimum flow:
 

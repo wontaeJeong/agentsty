@@ -13,7 +13,7 @@ type Config struct {
 }
 
 func LoadConfig(path string) Config {
-	cfg := Config{APIServer: "http://127.0.0.1:8080", Token: "dev-token"}
+	cfg := Config{APIServer: "http://127.0.0.1:8080"}
 	if path == "" {
 		if home, err := os.UserHomeDir(); err == nil {
 			path = filepath.Join(home, ".caskctl", "config.yaml")

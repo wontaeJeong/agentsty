@@ -42,6 +42,13 @@ spec:
           args:
             - --addr={{ .Values.api.args.addr }}
             - --namespace={{ include "agentcask.sessionNamespace" . }}
+          env:
+            - name: CASK_OIDC_ISSUER
+              value: {{ required "api.oidc.issuer is required" .Values.api.oidc.issuer | quote }}
+            - name: CASK_OIDC_AUDIENCE
+              value: {{ required "api.oidc.audience is required" .Values.api.oidc.audience | quote }}
+            - name: CASK_OIDC_JWKS_URL
+              value: {{ required "api.oidc.jwksURL is required" .Values.api.oidc.jwksURL | quote }}
           ports:
             - containerPort: {{ .Values.api.service.port }}
               name: http

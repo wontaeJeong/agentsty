@@ -21,6 +21,9 @@ spec:
           args:
             - --addr=:8080
             - --namespace=agentcask-sessions
+          envFrom:
+            - configMapRef:
+                name: cask-api-auth
           ports:
             - containerPort: 8080
               name: http

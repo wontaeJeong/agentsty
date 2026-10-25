@@ -10,7 +10,11 @@ This is the existing baseline API contract/design. Production targets do not sil
 
 ## 2. Authentication
 
-Simple development bearer tokens or mock identities are local/test mechanisms only, not production authentication evidence. Production requires verified user identity, user/session authorization, expiry/revocation behavior and tenant boundaries where applicable. OIDC and central identity integration are permitted; their introduction requires explicit contract and threat-model review.
+`Authorization: Bearer <JWT access token>` is required for every session/terminal operation. Arbitrary Bearer, `dev-token` and `user:xxx` are rejected in every runtime mode, including `--memory`. The server requires `CASK_OIDC_ISSUER`, `CASK_OIDC_AUDIENCE`, and `CASK_OIDC_JWKS_URL`; issuer/JWKS must be HTTPS. Only RS256/ES256 signed JWTs from that issuer for the API audience, with valid expiry, subject and not-before, are accepted. A token must carry the exact `cask:sessions` scope. See [ADR-007](DESIGN_DECISIONS.md#adr-007-jwt-검증-및-세션-소유권-경계).
+
+Invalid/missing credentials return 401 with `WWW-Authenticate: Bearer`; valid identity without scope or session ownership returns 403. Identity is a stable hash of issuer+subject, not an email, request body field or caller-chosen username. Legacy dev-owned sessions require drain/recreation or an explicitly reviewed operator migration. CLI device login/refresh, organization grants and immediate IdP token revocation are not implemented by this increment.
+
+The verifier does not enforce an access-token-specific `typ`/`token_use`. Operators **must** use a dedicated API audience and issue `cask:sessions` only in access tokens, not login ID tokens. A trusted signed ID-style JWT containing every matching API claim would otherwise pass; token type alone is not a rejection guarantee. Verify this separation with the actual IdP before deployment.
 
 All handlers must be designed to receive a resolved user identity:
 
@@ -174,7 +178,7 @@ GET /healthz
 GET /readyz
 ```
 
-`readyz` should verify that Kubernetes API access is available.
+`readyz` verifies local authenticator configuration and Kubernetes API access. It does not probe IdP availability; a cold/unknown JWKS key fetch failure denies authentication even if readiness is green.
 
 ## 9. Model proxy endpoint
 

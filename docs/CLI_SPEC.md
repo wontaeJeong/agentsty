@@ -20,10 +20,10 @@ Example:
 
 ```yaml
 apiServer: https://agentcask.example.com
-token: dev-token
+token: <externally-issued-JWT-access-token>
 ```
 
-`dev-token` is a local development example only, not a production credential or identity scheme. Production authentication must meet [Release Criteria](RELEASE_CRITERIA.md).
+There is no default token. The API rejects `dev-token`, arbitrary strings and `user:xxx` in every environment. Supply an externally issued JWT for the API audience with `cask:sessions` scope. Device authorization, automatic refresh, profiles and secure OS credential storage are still P0-1b/P2-1 backlog items; this config is not a completed authentication UX. Do not commit tokens or paste them into command history, logs or issue reports; prefer short-lived tokens supplied through your approved credential process. Use HTTPS/WSS except an operator-controlled loopback port-forward.
 
 Environment overrides:
 

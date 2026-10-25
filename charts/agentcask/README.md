@@ -17,12 +17,15 @@ Build and load the local control-plane and derived runtime images first. The run
 make kind-load
 ```
 
-Install the chart:
+Install the chart after configuring a real HTTPS test IdP (API audience and `cask:sessions` scope). Missing issuer/audience/JWKS values fail rendering; no dev authentication fallback exists:
 
 ```bash
 helm upgrade --install agentcask ./charts/agentcask \
   --namespace agentcask-system \
-  --create-namespace
+  --create-namespace \
+  --set-string api.oidc.issuer="$CASK_OIDC_ISSUER" \
+  --set-string api.oidc.audience="$CASK_OIDC_AUDIENCE" \
+  --set-string api.oidc.jwksURL="$CASK_OIDC_JWKS_URL"
 ```
 
 Then connect `caskctl` through `cask-api`:
@@ -30,11 +33,11 @@ Then connect `caskctl` through `cask-api`:
 ```bash
 kubectl -n agentcask-system port-forward svc/cask-api 18080:8080
 export CASK_API_SERVER=http://127.0.0.1:18080
-export CASK_TOKEN=dev-token
+# Supply CASK_TOKEN through an approved external JWT issuance process.
 ./bin/caskctl session create --tool stub --repo https://example.invalid/repo.git --ttl 30m
 ```
 
-Use `--tool stub` for deterministic terminal testing. Omit `--tool` or use `--tool opencode` for the current default user path. Binary presence and stub success are not real provider integration evidence. The local images, dev token and port-forwarding above are development examples only.
+Use `--tool stub` for deterministic terminal testing. Omit `--tool` or use `--tool opencode` for the current default user path. Binary presence and stub success are not real provider integration evidence. The local images and port-forwarding above are development examples only. `dev-token` and `user:xxx` are rejected, including locally. CLI device login/refresh and immediate JWT revocation are not implemented; see ADR-007 and the runbook.
 
 ## Production notes
 
@@ -51,6 +54,9 @@ These settings alone do not satisfy production requirements. Validate identity, 
 ## Useful checks
 
 ```bash
-helm lint charts/agentcask
-helm template agentcask charts/agentcask --include-crds >/tmp/agentcask.yaml
+make helm-lint
+make helm-template
+go test ./test/helm -count=1
 ```
+
+The make targets use `ci/oidc-values.yaml`, a render-only fixture with non-working IdP URLs. It must never be installed as a functional deployment. Override `HELM_VALUES` for your actual operator-owned configuration. Successful rendering does not validate that issuer/JWKS are reachable or that an IdP issues usable access tokens.

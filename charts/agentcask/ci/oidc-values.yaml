@@ -1,0 +1,7 @@
+# Rendering/lint fixture ONLY. These URLs do not serve an IdP and cannot log in.
+# Never use this file as a working deployment or production values file.
+api:
+  oidc:
+    issuer: https://render-only.example.invalid
+    audience: cask-api
+    jwksURL: https://render-only.example.invalid/keys

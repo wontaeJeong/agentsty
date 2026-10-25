@@ -7,6 +7,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"log/slog"
 	"net/http"
 	"net/url"
 	"sort"
@@ -14,6 +15,7 @@ import (
 	"time"
 
 	agentv1 "agentcask/api/v1alpha1"
+	"agentcask/internal/auth"
 	"agentcask/internal/redact"
 	"agentcask/internal/terminal"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -28,10 +30,13 @@ type Store interface {
 }
 
 type Server struct {
-	Store     Store
-	Terminal  *terminal.Gateway
-	Namespace string
-	Now       func() time.Time
+	Authenticator auth.Authenticator
+	Authorizer    Authorizer
+	Audit         *slog.Logger
+	Store         Store
+	Terminal      *terminal.Gateway
+	Namespace     string
+	Now           func() time.Time
 }
 
 type CreateSessionRequest struct {
@@ -63,8 +68,8 @@ func (s *Server) Handler() http.Handler {
 	mux := http.NewServeMux()
 	mux.HandleFunc("/healthz", s.healthz)
 	mux.HandleFunc("/readyz", s.readyz)
-	mux.HandleFunc("/api/v1/sessions", s.sessions)
-	mux.HandleFunc("/api/v1/sessions/", s.sessionByID)
+	mux.HandleFunc("/api/v1/sessions", s.protect(s.sessions))
+	mux.HandleFunc("/api/v1/sessions/", s.protect(s.sessionByID))
 	return redactMiddleware(mux)
 }
 
@@ -73,7 +78,7 @@ func (s *Server) healthz(w http.ResponseWriter, _ *http.Request) {
 }
 
 func (s *Server) readyz(w http.ResponseWriter, r *http.Request) {
-	if s.Store == nil {
+	if s.Store == nil || s.Authenticator == nil {
 		http.Error(w, "store not configured", http.StatusServiceUnavailable)
 		return
 	}
@@ -85,11 +90,7 @@ func (s *Server) readyz(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Server) sessions(w http.ResponseWriter, r *http.Request) {
-	userID, ok := userFromRequest(r)
-	if !ok {
-		http.Error(w, "not authenticated", http.StatusUnauthorized)
-		return
-	}
+	userID := auth.FromContext(r.Context()).UserID
 	switch r.Method {
 	case http.MethodPost:
 		s.createSession(w, r, userID)
@@ -101,11 +102,7 @@ func (s *Server) sessions(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Server) sessionByID(w http.ResponseWriter, r *http.Request) {
-	userID, ok := userFromRequest(r)
-	if !ok {
-		http.Error(w, "not authenticated", http.StatusUnauthorized)
-		return
-	}
+	userID := auth.FromContext(r.Context()).UserID
 	path := strings.TrimPrefix(r.URL.Path, "/api/v1/sessions/")
 	parts := strings.Split(strings.Trim(path, "/"), "/")
 	if len(parts) == 0 || parts[0] == "" {
@@ -120,6 +117,15 @@ func (s *Server) sessionByID(w http.ResponseWriter, r *http.Request) {
 		}
 		if s.Terminal == nil {
 			http.Error(w, "terminal gateway not configured", http.StatusServiceUnavailable)
+			return
+		}
+		session, err := s.Store.Get(r.Context(), id)
+		if err != nil || session == nil {
+			http.Error(w, "session not found", http.StatusNotFound)
+			return
+		}
+		if !s.authorize(r, "terminal", session.Spec.UserID, session.Name) {
+			http.Error(w, "forbidden", http.StatusForbidden)
 			return
 		}
 		s.Terminal.Serve(w, r, userID, id)
@@ -140,6 +146,10 @@ func (s *Server) sessionByID(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Server) createSession(w http.ResponseWriter, r *http.Request, userID string) {
+	if !s.authorize(r, "create", userID, "") {
+		http.Error(w, "forbidden", http.StatusForbidden)
+		return
+	}
 	var raw map[string]any
 	dec := json.NewDecoder(r.Body)
 	dec.DisallowUnknownFields()
@@ -195,7 +205,9 @@ func (s *Server) listSessions(w http.ResponseWriter, r *http.Request, userID str
 	sort.Slice(sessions, func(i, j int) bool { return sessions[i].Name < sessions[j].Name })
 	items := make([]SessionResponse, 0, len(sessions))
 	for i := range sessions {
-		items = append(items, responseFromSession(&sessions[i], false))
+		if s.authorize(r, "list", sessions[i].Spec.UserID, sessions[i].Name) {
+			items = append(items, responseFromSession(&sessions[i], false))
+		}
 	}
 	writeJSON(w, http.StatusOK, map[string]any{"items": items})
 }
@@ -206,7 +218,7 @@ func (s *Server) getSession(w http.ResponseWriter, r *http.Request, userID, id s
 		http.Error(w, "session not found", http.StatusNotFound)
 		return
 	}
-	if session.Spec.UserID != userID {
+	if !s.authorize(r, "get", session.Spec.UserID, session.Name) {
 		http.Error(w, "forbidden", http.StatusForbidden)
 		return
 	}
@@ -219,7 +231,7 @@ func (s *Server) deleteSession(w http.ResponseWriter, r *http.Request, userID, i
 		http.Error(w, "session not found", http.StatusNotFound)
 		return
 	}
-	if session.Spec.UserID != userID {
+	if !s.authorize(r, "delete", session.Spec.UserID, session.Name) {
 		http.Error(w, "forbidden", http.StatusForbidden)
 		return
 	}
@@ -228,21 +240,6 @@ func (s *Server) deleteSession(w http.ResponseWriter, r *http.Request, userID, i
 		return
 	}
 	writeJSON(w, http.StatusOK, map[string]any{"id": id, "deleted": true})
-}
-
-func userFromRequest(r *http.Request) (string, bool) {
-	header := r.Header.Get("Authorization")
-	if !strings.HasPrefix(header, "Bearer ") {
-		return "", false
-	}
-	token := strings.TrimSpace(strings.TrimPrefix(header, "Bearer "))
-	if token == "" {
-		return "", false
-	}
-	if strings.HasPrefix(token, "user:") && strings.TrimPrefix(token, "user:") != "" {
-		return strings.TrimPrefix(token, "user:"), true
-	}
-	return "dev-user", true
 }
 
 func responseFromSession(session *agentv1.AgentSession, includeTerminalURL bool) SessionResponse {
