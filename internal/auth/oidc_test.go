@@ -37,8 +37,9 @@ func TestJWTValidation(t *testing.T) {
 		"issuer": {"iss": "https://untrusted.invalid"}, "audience": {"aud": "different-api"},
 		"expired": {"exp": time.Now().Add(-time.Minute).Unix()}, "missing-exp": {"exp": nil},
 		"missing-sub": {"sub": nil}, "blank-sub": {"sub": " "},
-		"not-yet-valid": {"nbf": time.Now().Add(time.Hour).Unix()},
-		"missing-scope": {"scope": nil}, "wrong-scope": {"scope": "cask:sessions-admin"},
+		"not-yet-valid":                       {"nbf": time.Now().Add(time.Hour).Unix()},
+		"not-yet-valid-within-library-leeway": {"nbf": time.Now().Add(time.Minute).Unix()},
+		"missing-scope":                       {"scope": nil}, "wrong-scope": {"scope": "cask:sessions-admin"},
 	} {
 		t.Run(name, func(t *testing.T) {
 			if _, err := v.Authenticate(context.Background(), p.Token(t, "alice", claims)); err == nil {

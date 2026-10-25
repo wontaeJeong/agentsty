@@ -28,8 +28,8 @@
 ## Task 1: 재검증·의존성 백로그
 
 - [x] 필수 문서를 순서대로 읽고 최신 원격/기존 PR/테스트 기준선을 확인한다.
-- [ ] `docs/PRODUCTION_BACKLOG.md`에 P0/P1/P2별 현재 코드 근거·잔여 위험·종료 증거를 작성한다.
-- [ ] ADR-007에 JWT 선택·소유권 마이그레이션·운영 실패 모드를 기록한다.
+- [x] `docs/PRODUCTION_BACKLOG.md`에 P0/P1/P2별 현재 코드 근거·잔여 위험·종료 증거를 작성한다.
+- [x] ADR-007에 JWT 선택·소유권 마이그레이션·운영 실패 모드를 기록한다.
 
 ## Task 2: JWT 검증기와 API 인증·인가
 
@@ -37,21 +37,21 @@ Files: `internal/auth/{oidc.go,oidc_test.go}`, `internal/api/{server.go,server_t
 
 Interfaces: `auth.Authenticator.Authenticate(context.Context,string) (auth.Identity,error)`; `auth.NewOIDC(context.Context,auth.Config) (*auth.OIDC,error)`; `auth.Identity{UserID,Issuer,Subject,ExpiresAt}`. 테스트용 임의 토큰 인증은 `_test.go` 안에만 둔다.
 
-- [ ] 실패 테스트: 미설정 서버/임의 Bearer/user:xxx는 401, 유효 JWT는 201, 타인 GET/DELETE/terminal은 403.
-- [ ] `go test ./internal/auth ./internal/api`로 RED를 확인한다.
-- [ ] HTTPS JWKS, RS256/ES256 allowlist, issuer/audience/expiry/nbf/subject, 필수 scope를 구현한다. scope 부족은 403, 유효하지 않은 credential은 401.
-- [ ] issuer+sub 해시 소유권, 감사 JSON 로그(토큰/원시 claims 없음), list 재필터링, terminal 사전 인가/만료 종료를 구현한다.
-- [ ] 검증/회전/동시성/IdP 장애/권한/누출 테스트 GREEN 확인.
-- [ ] 단위별 검증 후 커밋한다.
+- [x] 실패 테스트: 미설정 서버/임의 Bearer/user:xxx는 401, 유효 JWT는 201, 타인 GET/DELETE/terminal은 403.
+- [x] `go test ./internal/auth ./internal/api`로 RED를 확인한다.
+- [x] HTTPS JWKS, RS256/ES256 allowlist, issuer/audience/expiry/nbf/subject, 필수 scope를 구현한다. scope 부족은 403, 유효하지 않은 credential은 401.
+- [x] issuer+sub 해시 소유권, 감사 JSON 로그(토큰/원시 claims 없음), list 재필터링, terminal 사전 인가/만료 종료를 구현한다.
+- [x] 검증/회전/동시성/IdP 장애/권한/누출 테스트 GREEN 확인. IdP 장애는 로컬 TLS JWKS fixture이며 실제 IdP 검증 아님.
+- [x] 단위별 검증 후 커밋한다.
 
 ## Task 3: 배포 설정과 호환성·검증 문서
 
 Files: `charts/agentcask/{values.yaml,templates/cask-api-deployment.yaml}`, `deploy/kind/cask-api.yaml`, `test/e2e/e2e_test.go`, `docs/{API_SPEC.md,SECURITY_MODEL.md,RUNBOOK.md}`, chart README.
 
-- [ ] Helm에 필수 issuer/audience/JWKS 설정 및 렌더 실패 검증을 추가한다. 인증 우회 플래그를 추가하지 않는다.
-- [ ] kind도 동일 검증기를 사용하도록 설정하고 E2E는 명시적으로 공급된 JWT를 사용한다. 토큰이 없으면 실제 E2E 실행은 실패하며 성공으로 집계하지 않는다.
-- [ ] 레거시 세션 마이그레이션/토큰 갱신의 현재 한계/JWKS 회전·장애 대응을 문서화한다.
-- [ ] `make test`, race, vet, build, Helm positive/negative, 가능한 cluster 검증을 실행하고 미실행 사유를 기록한다.
+- [x] Helm에 필수 issuer/audience/JWKS 설정 및 렌더 실패 검증을 추가한다. 인증 우회 플래그를 추가하지 않는다.
+- [x] kind도 동일 검증기를 사용하도록 설정하고 E2E는 명시적으로 공급된 JWT를 사용한다. 토큰이 없으면 실제 E2E 실행은 실패하며 성공으로 집계하지 않는다.
+- [x] 레거시 세션 마이그레이션/토큰 갱신의 현재 한계/JWKS 회전·장애 대응을 문서화한다.
+- [x] `make test`, race, vet, build, Helm positive/negative, 가능한 cluster 검증을 실행하고 미실행 사유를 기록한다. 실제 IdP/kind는 설정 미제공으로 BLOCKED.
 - [ ] 독립 리뷰 후 커밋/푸시/PR 생성. main/워크트리 연결 재확인. 사용자 승인 전 머지하지 않는다.
 
 ## 추가 단위: 발견된 의존성 취약점 제거
@@ -59,4 +59,4 @@ Files: `charts/agentcask/{values.yaml,templates/cask-api-deployment.yaml}`, `dep
 - [x] `govulncheck` 최초 실행: Go1.26.3 및 기존 x/net/x/text/spdystream에서 도달 가능한 22건 확인(RED).
 - [x] Go 최소 버전을 1.26.10, x/net 0.60.0, x/text 0.42.0, spdystream 0.5.1로 갱신하고 종속 x/sys/x/term을 함께 갱신한다.
 - [x] `make test`, race, vet, native/Linux-amd64 build 및 `govulncheck@v1.9.0` 재실행: No vulnerabilities found(GREEN).
-- [ ] race/vet/고정 버전 govulncheck를 CI gate로 유지하고 독립 커밋한다.
+- [x] race/vet/고정 버전 govulncheck를 CI gate로 유지하고 독립 커밋한다.

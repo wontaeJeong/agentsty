@@ -146,6 +146,7 @@ These procedures and guarantees are not implemented by this runbook update. Reco
 
 - API 실행 전 `CASK_OIDC_ISSUER`, `CASK_OIDC_AUDIENCE`, `CASK_OIDC_JWKS_URL`이 필수다. issuer/JWKS는 인증서가 검증되는 HTTPS URL이며 HTTP·userinfo·query·fragment는 허용하지 않는다. 공인 CA 기준이며 별도 CA는 이미지/플랫폼 trust store에 설치한다(TLS 검증을 끄지 않는다).
 - IdP가 API 전용 audience, 안정적인 `sub`, 짧은 `exp`, 정확한 `cask:sessions` scope를 갖는 RS256/ES256 JWT **access token**을 발급하도록 구성한다. OAuth client ID와 API audience를 혼동하지 않는다. opaque access token이나 로그인용 ID token을 대신 사용하지 않는다.
+- 검증기는 access-token 전용 `typ`/`token_use`를 강제하지 않는다. ID token에 같은 API audience/scope가 들어가면 해당 JWT도 통과한다. 로그인 client audience와 API audience를 분리하고 API scope가 access token에만 발급되는지 실제 IdP의 정상/부정 시나리오로 확인해야 한다. 문서상 ID token 사용 금지가 자동 type 검증을 뜻하지 않는다.
 - Helm `api.oidc.{issuer,audience,jwksURL}`는 필수다. kind의 `make kind-deploy`는 위 환경 변수에서 `cask-api-auth` ConfigMap을 만든다. 이는 공개 인증 메타데이터이며 JWT를 저장하지 않는다.
 - 신규 설정은 Pod rollout/restart 시 적용된다. 인증만 강화된 상태로 다른 P0가 해결되었다고 판단하지 않는다.
 

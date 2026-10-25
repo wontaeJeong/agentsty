@@ -14,6 +14,8 @@ This is the existing baseline API contract/design. Production targets do not sil
 
 Invalid/missing credentials return 401 with `WWW-Authenticate: Bearer`; valid identity without scope or session ownership returns 403. Identity is a stable hash of issuer+subject, not an email, request body field or caller-chosen username. Legacy dev-owned sessions require drain/recreation or an explicitly reviewed operator migration. CLI device login/refresh, organization grants and immediate IdP token revocation are not implemented by this increment.
 
+The verifier does not enforce an access-token-specific `typ`/`token_use`. Operators **must** use a dedicated API audience and issue `cask:sessions` only in access tokens, not login ID tokens. A trusted signed ID-style JWT containing every matching API claim would otherwise pass; token type alone is not a rejection guarantee. Verify this separation with the actual IdP before deployment.
+
 All handlers must be designed to receive a resolved user identity:
 
 ```text

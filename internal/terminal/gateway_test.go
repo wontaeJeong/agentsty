@@ -2,10 +2,13 @@ package terminal
 
 import (
 	"context"
+	"errors"
+	"net"
 	"net/http"
 	"net/http/httptest"
 	"strings"
 	"sync"
+	"sync/atomic"
 	"testing"
 	"time"
 
@@ -96,5 +99,74 @@ func TestDefaultCommandPrefersOpenCodeWithTmux(t *testing.T) {
 	stub := strings.Join(DefaultCommand("stub"), " ")
 	if strings.Contains(stub, "tmux") || !strings.Contains(stub, "cask-stub-tui") {
 		t.Fatalf("stub command should stay deterministic without tmux: %v", DefaultCommand("stub"))
+	}
+}
+
+type backendFunc func(context.Context, ExecRequest) (ExecStream, error)
+
+func (f backendFunc) Start(ctx context.Context, req ExecRequest) (ExecStream, error) {
+	return f(ctx, req)
+}
+
+type closingStream struct {
+	*fakeStream
+	closed chan struct{}
+	once   sync.Once
+}
+
+func (s *closingStream) Close() error {
+	s.once.Do(func() { close(s.closed); close(s.out) })
+	return nil
+}
+
+func TestConnectedTerminalRechecksOwnerAndResolverErrors(t *testing.T) {
+	for _, failure := range []string{"owner-changed", "resolver-failed"} {
+		t.Run(failure, func(t *testing.T) {
+			var invalid atomic.Bool
+			session := agentv1.NewAgentSession("sess-watch", "agentcask-sessions", agentv1.AgentSessionSpec{UserID: "alice", Tool: "stub", TTLSeconds: 7200}, metav1.Now())
+			session.Status.Phase = agentv1.PhaseRunning
+			session.Status.TerminalReady = true
+			session.Status.PodName = "agent-session-sess-watch"
+			stream := &closingStream{fakeStream: newFakeStream(), closed: make(chan struct{})}
+			backendCtx := make(chan context.Context, 1)
+			gateway := &Gateway{Resolver: resolverFunc(func(context.Context, string) (*agentv1.AgentSession, error) {
+				copy := *session
+				if invalid.Load() {
+					if failure == "owner-changed" {
+						copy.Spec.UserID = "bob"
+					} else {
+						return &copy, errors.New("resolver unavailable")
+					}
+				}
+				return &copy, nil
+			}), Backend: backendFunc(func(ctx context.Context, _ ExecRequest) (ExecStream, error) { backendCtx <- ctx; return stream, nil })}
+			server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) { gateway.Serve(w, r, "alice", "sess-watch") }))
+			defer server.Close()
+			conn, _, err := websocket.DefaultDialer.Dial("ws"+strings.TrimPrefix(server.URL, "http"), nil)
+			if err != nil {
+				t.Fatal(err)
+			}
+			defer conn.Close()
+			ctx := <-backendCtx
+			invalid.Store(true)
+			_ = conn.SetReadDeadline(time.Now().Add(4 * time.Second))
+			_, _, err = conn.ReadMessage()
+			if err == nil {
+				t.Fatal("invalid owner/resolver left connection open")
+			}
+			if nerr, ok := err.(net.Error); ok && nerr.Timeout() {
+				t.Fatal("authorization polling did not close connection")
+			}
+			select {
+			case <-stream.closed:
+			case <-time.After(time.Second):
+				t.Fatal("backend not closed")
+			}
+			select {
+			case <-ctx.Done():
+			case <-time.After(time.Second):
+				t.Fatal("backend context not cancelled")
+			}
+		})
 	}
 }

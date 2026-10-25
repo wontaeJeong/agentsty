@@ -32,7 +32,7 @@
 
 **문제/위협:** 임의 Bearer가 dev-user, `user:xxx`가 임의 사용자로 처리되어 기존 owner 비교를 우회했다. 요청 본문·email·사용자 이름은 신뢰 가능한 소유권 키가 아니다.
 
-**선택:** Go 핵심 구조와 CRD를 유지하고 `internal/auth`에 coreos/go-oidc v3 검증기를 둔다. 서버가 명시적으로 설정한 HTTPS issuer/audience/JWKS만 신뢰한다(redirect 금지, TLS 검증, 5초 HTTP timeout). RS256/ES256 allowlist, 서명/issuer/audience/exp/sub/nbf를 검증하고 API 전용 audience 및 `cask:sessions` scope를 요구한다. opaque token/ID token 직접 사용/사용자 지정 jku 및 개발 토큰을 지원하지 않는다. discovery는 생략하고 운영자가 JWKS URL을 고정한다. 인증 실패 401, 유효 identity의 scope/소유권 부족 403. scope claim이 없는 JWT는 세션 권한을 갖지 않는다.
+**선택:** Go 핵심 구조와 CRD를 유지하고 `internal/auth`에 coreos/go-oidc v3 검증기를 둔다. 서버가 명시적으로 설정한 HTTPS issuer/audience/JWKS만 신뢰한다(redirect 금지, TLS 검증, 5초 HTTP timeout). RS256/ES256 allowlist, 서명/issuer/audience/exp/sub/nbf를 검증하고 API 전용 audience 및 `cask:sessions` scope를 요구한다. opaque token/사용자 지정 jku 및 개발 토큰을 지원하지 않는다. **access-token 전용 typ/token_use discriminator는 강제하지 않으므로**, 신뢰된 IdP가 같은 audience/scope를 ID token에도 발급하면 그 JWT 역시 검증을 통과한다. API audience를 로그인 client audience와 분리하고 API scope를 access token에만 발급하는 것은 운영자가 강제·검증해야 하는 필수 조건이다. discovery는 생략하고 운영자가 JWKS URL을 고정한다. 인증 실패 401, 유효 identity의 scope/소유권 부족 403. scope claim이 없는 JWT는 세션 권한을 갖지 않는다.
 
 **Identity/정책:** 정확한 `[issuer,subject]` JSON 배열의 SHA-256을 padding 없는 소문자 base32로 인코딩하고 `u-` 접두사를 붙인다(54자, Kubernetes label 유효). email/username 변경이나 token 갱신에 소유권이 바뀌지 않는다. API는 모든 기존 세션 접근을 owner로 제한하고 목록도 재필터링한다. 추가 정책 인터페이스는 owner 권한을 더 제한할 수 있지만 공유/이전 권한을 부여하지 못한다. 조직/프로젝트 모델은 별도 ADR/구현으로 추가한다.
 

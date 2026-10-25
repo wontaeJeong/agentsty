@@ -69,7 +69,10 @@ kind-deploy:
 kind-auth-check:
 	@test -n "$$CASK_OIDC_ISSUER" -a -n "$$CASK_OIDC_AUDIENCE" -a -n "$$CASK_OIDC_JWKS_URL" -a -n "$$CASK_E2E_TOKEN" || { echo "kind-test requires CASK_OIDC_ISSUER/AUDIENCE/JWKS_URL and CASK_E2E_TOKEN; no dev authentication fallback" >&2; exit 1; }
 
-kind-test: kind-auth-check kind-up kind-load kind-deploy
+kind-test: kind-auth-check
+	$(MAKE) kind-up
+	$(MAKE) kind-load
+	$(MAKE) kind-deploy
 	RUN_KIND_E2E=1 CASKCTL_BIN=$(CURDIR)/bin/caskctl go test ./test/e2e/... -count=1 -timeout=5m
 
 kind-down:

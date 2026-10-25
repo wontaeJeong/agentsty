@@ -146,6 +146,10 @@ func (s *Server) sessionByID(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Server) createSession(w http.ResponseWriter, r *http.Request, userID string) {
+	if !s.authorize(r, "create", userID, "") {
+		http.Error(w, "forbidden", http.StatusForbidden)
+		return
+	}
 	var raw map[string]any
 	dec := json.NewDecoder(r.Body)
 	dec.DisallowUnknownFields()
@@ -189,7 +193,6 @@ func (s *Server) createSession(w http.ResponseWriter, r *http.Request, userID st
 		http.Error(w, redact.String(err.Error()), http.StatusInternalServerError)
 		return
 	}
-	s.audit("authorization.allowed", userID, "create", created.Name)
 	writeJSON(w, http.StatusCreated, responseFromSession(created, true))
 }
 

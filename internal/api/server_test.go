@@ -13,6 +13,7 @@ import (
 	"testing"
 	"time"
 
+	agentv1 "agentcask/api/v1alpha1"
 	"agentcask/internal/auth"
 	"agentcask/internal/redact"
 	"agentcask/internal/terminal"
@@ -212,6 +213,38 @@ func TestDuplicateAuthorizationRejected(t *testing.T) {
 	s.Handler().ServeHTTP(w, r)
 	if w.Code != 401 {
 		t.Fatalf("ambiguous authorization accepted: %d", w.Code)
+	}
+}
+
+type denyPolicy struct{}
+
+func (denyPolicy) Allow(context.Context, auth.Identity, string, string) bool { return false }
+
+type createTrackingStore struct {
+	Store
+	creates int
+}
+
+func (s *createTrackingStore) Create(ctx context.Context, session *agentv1.AgentSession) (*agentv1.AgentSession, error) {
+	s.creates++
+	return s.Store.Create(ctx, session)
+}
+
+func TestCreationConsultsAdditionalPolicyBeforePersistence(t *testing.T) {
+	store := &createTrackingStore{Store: NewMemoryStore(false)}
+	s, p := authenticatedServer(t, store)
+	s.Authorizer = denyPolicy{}
+	var audit bytes.Buffer
+	s.Audit = slog.New(slog.NewJSONHandler(&audit, nil))
+	r := httptest.NewRequest("POST", "/api/v1/sessions", strings.NewReader(`{"tool":"opencode","repoUrl":"https://example.invalid/repo.git"}`))
+	r.Header.Set("Authorization", "Bearer "+p.Token(t, "alice", nil))
+	w := httptest.NewRecorder()
+	s.Handler().ServeHTTP(w, r)
+	if w.Code != 403 || store.creates != 0 {
+		t.Fatalf("create bypassed policy: status=%d persisted=%d", w.Code, store.creates)
+	}
+	if !strings.Contains(audit.String(), "authorization.denied") || strings.Contains(audit.String(), "authorization.allowed") {
+		t.Fatal("denied creation recorded as allowed")
 	}
 }
 
